@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "multimodal-doc-rag"
+version = "0.1.0"
+description = "OCR-Free Multimodal Document & Diagram RAG Engine"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [
+    {name = "Karanpr-18"},
+]
+keywords = ["rag", "multimodal", "ocr-free", "document-ai", "colqwen"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.3.0", "httpx>=0.28.0"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
