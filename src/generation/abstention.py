@@ -88,8 +88,8 @@ class AbstentionCalibrator:
     def compute_confidence(
         self,
         retrieval_scores: Sequence[float],
-        query_token_count: int,
-        vlm_confidence: float,
+        query_token_count: int = 10,
+        vlm_confidence: float = 0.85,
     ) -> float:
         """
         Compute calibrated confidence score C(q) for a query.
@@ -147,8 +147,8 @@ class AbstentionCalibrator:
     def extract_features(
         self,
         retrieval_scores: Sequence[float],
-        query_token_count: int,
-        vlm_confidence: float,
+        query_token_count: int = 10,
+        vlm_confidence: float = 0.85,
     ) -> list[float]:
         """
         Extract the 3 raw features [s̃₁, Δs, logit(p)] for a query.
