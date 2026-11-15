@@ -1,0 +1,58 @@
+{
+  "OCR+Dense": {
+    "system_name": "OCR+Dense",
+    "recall@1": 0.3867,
+    "recall@5": 0.5733,
+    "ndcg@5": 0.4818,
+    "mrr": 0.4516,
+    "index_size_mb": 42.5,
+    "mean_latency_ms": 84.55,
+    "p95_latency_ms": 112.95,
+    "abstention_auroc": 0.5,
+    "ece": 0.0,
+    "answered_accuracy": 0.29,
+    "num_samples": 100
+  },
+  "ColQwen fp32": {
+    "system_name": "ColQwen fp32",
+    "recall@1": 0.8133,
+    "recall@5": 0.9467,
+    "ndcg@5": 0.88,
+    "mrr": 0.8582,
+    "index_size_mb": 512.0,
+    "mean_latency_ms": 142.13,
+    "p95_latency_ms": 175.87,
+    "abstention_auroc": 0.5,
+    "ece": 0.0,
+    "answered_accuracy": 0.61,
+    "num_samples": 100
+  },
+  "ColQwen binary_quantized": {
+    "system_name": "ColQwen binary_quantized",
+    "recall@1": 0.68,
+    "recall@5": 0.8533,
+    "ndcg@5": 0.7654,
+    "mrr": 0.7371,
+    "index_size_mb": 16.2,
+    "mean_latency_ms": 35.86,
+    "p95_latency_ms": 46.9,
+    "abstention_auroc": 0.5,
+    "ece": 0.0,
+    "answered_accuracy": 0.51,
+    "num_samples": 100
+  },
+  "Full RAG+Abstention": {
+    "system_name": "Full RAG+Abstention",
+    "recall@1": 0.8667,
+    "recall@5": 0.9467,
+    "ndcg@5": 0.9012,
+    "mrr": 0.8869,
+    "index_size_mb": 16.2,
+    "mean_latency_ms": 220.94,
+    "p95_latency_ms": 276.23,
+    "abstention_auroc": 1.0,
+    "ece": 0.2046,
+    "answered_accuracy": 0.942,
+    "num_samples": 100
+  }
+}
