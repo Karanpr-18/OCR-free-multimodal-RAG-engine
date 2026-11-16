@@ -361,7 +361,13 @@ class VLMReader:
         answer = choice["message"]["content"].strip()
         citations, page_refs = self.extract_citations(answer, page_ids)
 
-        confidence = 0.88 if choice.get("finish_reason") == "stop" else 0.50
+        # Confidence estimated from finish_reason + content length heuristic.
+        # "stop" means model generated naturally; truncated/length means less reliable.
+        base = 0.75 if choice.get("finish_reason") == "stop" else 0.40
+        # Penalise very short answers (likely refusals or errors)
+        answer_len = len(answer.split())
+        length_bonus = min(0.15, answer_len / 200.0)
+        confidence = round(min(base + length_bonus, 0.90), 4)
 
         return {
             "answer": answer,
