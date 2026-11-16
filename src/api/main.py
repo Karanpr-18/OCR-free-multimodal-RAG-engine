@@ -35,7 +35,8 @@ from fastapi import (
     status,
 )
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from PIL import Image
 
 from src.api.schemas import (
@@ -670,3 +671,18 @@ async def query_pipeline(
         ),
         images=encoded_images,
     )
+
+
+# ---------------------------------------------------------------------------
+# Static Files & Web UI Mount
+# ---------------------------------------------------------------------------
+
+_webapp_dir = Path(__file__).resolve().parent.parent.parent / "webapp"
+if _webapp_dir.exists():
+    app.mount("/ui", StaticFiles(directory=str(_webapp_dir), html=True), name="ui")
+
+    @app.get("/", include_in_schema=False)
+    async def redirect_root_to_ui():
+        """Redirect root URL to web application UI."""
+        return RedirectResponse(url="/ui/")
+
