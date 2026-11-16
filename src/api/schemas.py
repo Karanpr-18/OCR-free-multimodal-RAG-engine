@@ -79,6 +79,11 @@ class QueryRequest(BaseModel):
         description="Number of top visual pages to retrieve via MaxSim",
         examples=[2],
     )
+    model: Optional[str] = Field(
+        default=None,
+        description="Override reader model ID (e.g. opencode/deepseek-v4.1-flash-free, Qwen/Qwen2.5-VL-7B-Instruct)",
+        examples=["opencode/deepseek-v4.1-flash-free"],
+    )
     include_images: bool = Field(
         default=False,
         description="Whether to return retrieved page images (base64 or references)",

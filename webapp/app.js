@@ -433,11 +433,14 @@ async function query() {
   showSkeleton();
 
   try {
+    const selectedModel = $('#model-select') ? $('#model-select').value : null;
+
     const payload = {
       query: q,
       collection_name: collectionName,
       top_k: state.topK,
       include_images: state.includeImages,
+      model: selectedModel,
     };
     const data = await apiFetch('/v1/query', {
       method: 'POST',

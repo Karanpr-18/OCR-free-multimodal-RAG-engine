@@ -29,8 +29,16 @@ class ModelSettings(BaseSettings):
     """Vision-language and embedding model settings."""
 
     vlm_model: str = Field(
-        default="Qwen/Qwen2.5-VL-3B-Instruct",
-        description="HuggingFace model ID for the VLM reader",
+        default="opencode/deepseek-v4.1-flash-free",
+        description="Model ID for the VLM reader",
+    )
+    vlm_api_endpoint: Optional[str] = Field(
+        default=None,
+        description="Optional OpenAI-compatible endpoint URL for VLM reader",
+    )
+    vlm_api_key: Optional[str] = Field(
+        default=None,
+        description="Optional API key for VLM endpoint",
     )
     colqwen_model: str = Field(
         default="vidore/colqwen2.5-v0.2",
@@ -93,7 +101,9 @@ class Settings(BaseSettings):
     # --- Top-level env overrides ---
     qdrant_mode: str = Field(default="local")
     qdrant_url: str = Field(default="http://localhost:6333")
-    vlm_model: str = Field(default="Qwen/Qwen2.5-VL-3B-Instruct")
+    vlm_model: str = Field(default="opencode/deepseek-v4.1-flash-free")
+    vlm_api_endpoint: Optional[str] = Field(default=None)
+    vlm_api_key: Optional[str] = Field(default=None)
     colqwen_model: str = Field(default="vidore/colqwen2.5-v0.2")
     device: str = Field(default="auto")
     top_k: int = Field(default=2)

@@ -190,13 +190,15 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logger.warning("Could not initialize VisualEncoder: %s", exc)
 
-    # 4. Initialize VLM Reader (Qwen2.5-VL)
+    # 4. Initialize VLM Reader
     try:
         from src.generation.vlm_reader import VLMReader
         services.vlm_reader = VLMReader(
-            model_name=settings.model.vlm_model,
+            model_name=settings.vlm_model or settings.model.vlm_model,
             device=settings.model.device,
             dtype=settings.model.dtype,
+            api_endpoint=settings.vlm_api_endpoint or getattr(settings.model, "vlm_api_endpoint", None),
+            api_key=settings.vlm_api_key or getattr(settings.model, "vlm_api_key", None),
             lazy_load=True,
         )
         logger.info("VLMReader initialized (%s, lazy_load=True)", settings.model.vlm_model)
@@ -631,8 +633,14 @@ async def query_pipeline(
     t_vlm_start = time.perf_counter()
     retrieved_images = [services.get_page_image(pid) for pid in retrieved_page_ids]
 
+    # Dynamically use selected reader model if specified
+    vlm_reader = services.vlm_reader
+    if request.model and hasattr(vlm_reader, "model_name") and vlm_reader.model_name != request.model:
+        # Check if model has changed and update reader dynamically
+        vlm_reader.model_name = request.model
+
     vlm_result = await asyncio.to_thread(
-        services.vlm_reader.generate_answer,
+        vlm_reader.generate_answer,
         query=query,
         page_images=retrieved_images,
         page_ids=retrieved_page_ids,
