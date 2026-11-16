@@ -154,7 +154,7 @@ async def lifespan(app: FastAPI):
     try:
         from src.generation.abstention import AbstentionCalibrator
         services.abstention_calibrator = AbstentionCalibrator(
-            threshold=settings.confidence_threshold
+            default_threshold=settings.confidence_threshold
         )
         logger.info("AbstentionCalibrator initialized (threshold=%.2f)", settings.confidence_threshold)
     except Exception as exc:
