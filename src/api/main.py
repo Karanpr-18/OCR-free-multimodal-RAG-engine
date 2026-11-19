@@ -190,18 +190,15 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logger.warning("Could not initialize VisualEncoder: %s", exc)
 
-    # 4. Initialize VLM Reader
+    # 4. Initialize VLM Reader (API-first: OpenCode / Gemini / OpenAI)
     try:
         from src.generation.vlm_reader import VLMReader
         services.vlm_reader = VLMReader(
             model_name=settings.vlm_model or settings.model.vlm_model,
-            device=settings.model.device,
-            dtype=settings.model.dtype,
             api_endpoint=settings.vlm_api_endpoint or getattr(settings.model, "vlm_api_endpoint", None),
             api_key=settings.vlm_api_key or getattr(settings.model, "vlm_api_key", None),
-            lazy_load=True,
         )
-        logger.info("VLMReader initialized (%s, lazy_load=True)", settings.model.vlm_model)
+        logger.info("VLMReader initialized in API mode (%s)", services.vlm_reader.model_name)
     except Exception as exc:
         logger.warning("Could not initialize VLMReader: %s", exc)
 
@@ -639,6 +636,8 @@ async def query_pipeline(
         vlm_reader.model_name = request.model
     if request.vlm_endpoint and hasattr(vlm_reader, "api_endpoint"):
         vlm_reader.api_endpoint = request.vlm_endpoint.rstrip("/")
+    if request.vlm_api_key and hasattr(vlm_reader, "api_key"):
+        vlm_reader.api_key = request.vlm_api_key
 
     vlm_result = await asyncio.to_thread(
         vlm_reader.generate_answer,

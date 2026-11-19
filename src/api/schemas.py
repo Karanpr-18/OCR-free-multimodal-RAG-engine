@@ -89,6 +89,11 @@ class QueryRequest(BaseModel):
         description="Optional OpenAI-compatible VLM bridge or local endpoint URL",
         examples=["http://localhost:18787/v1"],
     )
+    vlm_api_key: Optional[str] = Field(
+        default=None,
+        description="Optional API key for OpenCode or Google Gemini",
+        examples=["AIzaSy..."],
+    )
     include_images: bool = Field(
         default=False,
         description="Whether to return retrieved page images (base64 or references)",

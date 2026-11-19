@@ -29,26 +29,26 @@ class ModelSettings(BaseSettings):
     """Vision-language and embedding model settings."""
 
     vlm_model: str = Field(
-        default="Qwen/Qwen2.5-VL-3B-Instruct",
+        default="opencode/deepseek-v4.1-flash-free",
         description="Model ID for the VLM reader",
     )
     vlm_api_endpoint: Optional[str] = Field(
-        default=None,
-        description="Optional OpenAI-compatible endpoint URL for VLM reader",
+        default="http://localhost:18787/v1",
+        description="OpenCode or OpenAI-compatible endpoint URL for VLM reader",
     )
     vlm_api_key: Optional[str] = Field(
         default=None,
-        description="Optional API key for VLM endpoint",
+        description="Optional API key for VLM endpoint or Gemini",
     )
     colqwen_model: str = Field(
         default="vidore/colqwen2.5-v0.2",
-        description="HuggingFace model ID for the ColQwen visual encoder",
+        description="Model ID for the ColQwen visual encoder",
     )
     device: str = Field(
-        default="auto",
-        description="Device for model inference (auto, cuda, cpu, mps)",
+        default="cpu",
+        description="Device for model inference (cpu, auto)",
     )
-    dtype: str = Field(default="bfloat16")
+    dtype: str = Field(default="float32")
     max_new_tokens: int = Field(default=1024)
 
 
@@ -101,8 +101,8 @@ class Settings(BaseSettings):
     # --- Top-level env overrides ---
     qdrant_mode: str = Field(default="local")
     qdrant_url: str = Field(default="http://localhost:6333")
-    vlm_model: str = Field(default="Qwen/Qwen2.5-VL-3B-Instruct")
-    vlm_api_endpoint: Optional[str] = Field(default=None)
+    vlm_model: str = Field(default="opencode/deepseek-v4.1-flash-free")
+    vlm_api_endpoint: Optional[str] = Field(default="http://localhost:18787/v1")
     vlm_api_key: Optional[str] = Field(default=None)
     colqwen_model: str = Field(default="vidore/colqwen2.5-v0.2")
     device: str = Field(default="auto")

@@ -1,15 +1,15 @@
-# Default configuration for OCR-Free Multimodal RAG Engine
+# Default configuration for OCR-Free Multimodal RAG Engine (API-First Mode)
 
 model:
-  vlm_model: "Qwen/Qwen2.5-VL-3B-Instruct"
-  vlm_api_endpoint: null
+  vlm_model: "opencode/deepseek-v4.1-flash-free"
+  vlm_api_endpoint: "http://localhost:18787/v1"
   vlm_api_key: null
   colqwen_model: "vidore/colqwen2.5-v0.2"
-  device: "auto"
-  dtype: "bfloat16"
+  device: "cpu"
+  dtype: "float32"
   max_new_tokens: 1024
 
-# Supported vision-language models (Local weights, OpenCode Free Tier, or Cloud APIs)
+# Supported vision-language models (API-first via OpenCode or Google Gemini)
 supported_vlm_models:
   - id: "opencode/deepseek-v4.1-flash-free"
     name: "DeepSeek v4.1 Flash (OpenCode Free Tier)"
@@ -21,26 +21,26 @@ supported_vlm_models:
     type: "opencode_bridge"
     provider: "opencode"
     free: true
-  - id: "Qwen/Qwen2.5-VL-3B-Instruct"
-    name: "Qwen2.5-VL 3B Instruct (Local Weights)"
-    type: "local_or_vllm"
-    provider: "huggingface"
-  - id: "Qwen/Qwen2.5-VL-7B-Instruct"
-    name: "Qwen2.5-VL 7B Instruct (Local Weights)"
-    type: "local_or_vllm"
-    provider: "huggingface"
-  - id: "meta-llama/Llama-3.2-11B-Vision-Instruct"
-    name: "Llama-3.2 11B Vision Instruct (Open Weight)"
-    type: "local_or_vllm"
-    provider: "huggingface"
-  - id: "openai/gpt-4o-mini"
-    name: "OpenAI GPT-4o-mini"
-    type: "api"
-    provider: "openai"
+  - id: "opencode/qwen-2.5-vl-72b-free"
+    name: "Qwen 2.5 VL 72B (OpenCode Free Tier)"
+    type: "opencode_bridge"
+    provider: "opencode"
+    free: true
+  - id: "google/gemini-2.0-flash"
+    name: "Google Gemini 2.0 Flash (Recommended Cloud)"
+    type: "gemini_api"
+    provider: "google"
+    free: true
   - id: "google/gemini-1.5-flash"
     name: "Google Gemini 1.5 Flash"
-    type: "api"
+    type: "gemini_api"
     provider: "google"
+    free: true
+  - id: "openai/gpt-4o-mini"
+    name: "OpenAI GPT-4o-mini"
+    type: "openai_api"
+    provider: "openai"
+    free: false
 
 retrieval:
   top_k: 2

@@ -488,17 +488,22 @@ async function submitQuery() {
   let responseData = null;
 
   try {
+    const geminiKey = localStorage.getItem('rag_gemini_api_key') || '';
+    const payload = {
+      query: query,
+      collection_name: $('#collection-name').value.trim() || 'multimodal_docs',
+      top_k: state.topK,
+      model: state.model,
+      include_images: state.includeImages,
+      vlm_endpoint: state.vlmBridgeUrl || undefined
+    };
+    if (geminiKey) {
+      payload.vlm_api_key = geminiKey;
+    }
     responseData = await apiFetch('/v1/query', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        query: query,
-        collection_name: $('#collection-name').value.trim() || 'multimodal_docs',
-        top_k: state.topK,
-        model: state.model,
-        include_images: state.includeImages,
-        vlm_endpoint: state.vlmBridgeUrl || undefined
-      })
+      body: JSON.stringify(payload)
     });
   } catch (err) {
     // Generate intelligent contextual mock response matching our preset
@@ -754,6 +759,7 @@ function initLayoutToggles() {
   $('#btn-open-settings').addEventListener('click', () => {
     $('#setting-api-url').value = state.apiBase;
     $('#setting-vlm-bridge').value = state.vlmBridgeUrl;
+    if ($('#setting-gemini-key')) $('#setting-gemini-key').value = localStorage.getItem('rag_gemini_api_key') || '';
     $('#setting-model-select').value = state.model;
     $('#setting-topk').value = state.topK;
     $('#setting-topk-display').textContent = state.topK;
@@ -777,6 +783,10 @@ function initLayoutToggles() {
     localStorage.setItem('rag_api_base', state.apiBase);
     state.vlmBridgeUrl = $('#setting-vlm-bridge').value.trim();
     localStorage.setItem('rag_vlm_bridge_url', state.vlmBridgeUrl);
+    if ($('#setting-gemini-key')) {
+      const gKey = $('#setting-gemini-key').value.trim();
+      localStorage.setItem('rag_gemini_api_key', gKey);
+    }
     state.model = $('#setting-model-select').value;
     localStorage.setItem('rag_active_model', state.model);
     state.topK = parseInt($('#setting-topk').value, 10);
