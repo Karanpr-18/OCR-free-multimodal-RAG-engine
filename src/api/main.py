@@ -633,11 +633,12 @@ async def query_pipeline(
     t_vlm_start = time.perf_counter()
     retrieved_images = [services.get_page_image(pid) for pid in retrieved_page_ids]
 
-    # Dynamically use selected reader model if specified
+    # Dynamically use selected reader model or bridge endpoint if specified
     vlm_reader = services.vlm_reader
-    if request.model and hasattr(vlm_reader, "model_name") and vlm_reader.model_name != request.model:
-        # Check if model has changed and update reader dynamically
+    if request.model and hasattr(vlm_reader, "model_name"):
         vlm_reader.model_name = request.model
+    if request.vlm_endpoint and hasattr(vlm_reader, "api_endpoint"):
+        vlm_reader.api_endpoint = request.vlm_endpoint.rstrip("/")
 
     vlm_result = await asyncio.to_thread(
         vlm_reader.generate_answer,

@@ -345,6 +345,7 @@ class VLMReader:
             else:
                 formatted_messages.append({"role": role, "content": content})
 
+        # Support standard OpenAI or OpenCode chat completion payloads
         payload = {
             "model": self.model_name,
             "messages": formatted_messages,
@@ -358,7 +359,12 @@ class VLMReader:
             data = resp.json()
 
         choice = data["choices"][0]
-        answer = choice["message"]["content"].strip()
+        # Handle both standard string content and nested structure
+        msg_content = choice["message"]["content"]
+        if isinstance(msg_content, list):
+            answer = " ".join([part.get("text", "") for part in msg_content if isinstance(part, dict) and "text" in part]).strip()
+        else:
+            answer = str(msg_content).strip()
         citations, page_refs = self.extract_citations(answer, page_ids)
 
         # Confidence estimated from finish_reason + content length heuristic.

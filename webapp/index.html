@@ -231,9 +231,9 @@
               </div>
 
               <div class="toolbar-model-selector">
-                <button class="model-badge" id="btn-select-model" title="Select Vision-Language Reader Model">
+                <button class="model-badge" id="btn-select-model" title="Select Vision-Language Reader Model (Click to Configure)">
                   <span class="status-dot" style="background:#10b981;box-shadow:0 0 6px #10b981;"></span>
-                  <span id="active-model-name">Qwen2.5-VL-7B-Instruct</span>
+                  <span id="active-model-name">DeepSeek v4.1 Flash (OpenCode Free)</span>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polyline points="6 9 12 15 18 9"/>
                   </svg>
@@ -578,21 +578,21 @@
             </div>
 
             <div class="stat-card">
-              <div class="stat-card-title">Total Queries Handled</div>
-              <div class="stat-card-number" id="diag-total-queries">142</div>
+              <div class="stat-card-title">Live Server Queries Handled</div>
+              <div class="stat-card-number" id="diag-total-queries">0</div>
               <div class="stat-card-sub">Throughput across current server session</div>
             </div>
 
             <div class="stat-card">
-              <div class="stat-card-title">p50 / p95 Total Latency</div>
-              <div class="stat-card-number" id="diag-latency-percentiles" style="font-size:22px;">380ms / 520ms</div>
-              <div class="stat-card-sub">End-to-end query + late interaction + generation</div>
+              <div class="stat-card-title">Live p50 / p95 Latency</div>
+              <div class="stat-card-number" id="diag-latency-percentiles" style="font-size:22px;">-- / --</div>
+              <div class="stat-card-sub">Measured on live requests</div>
             </div>
 
             <div class="stat-card">
-              <div class="stat-card-title">Abstention Rate</div>
-              <div class="stat-card-number" id="diag-abstention-rate">12.4%</div>
-              <div class="stat-card-sub">Calibrated confidence safety threshold</div>
+              <div class="stat-card-title">Live Abstention Rate</div>
+              <div class="stat-card-number" id="diag-abstention-rate">0.0%</div>
+              <div class="stat-card-sub">Calculated dynamically from live queries</div>
             </div>
           </div>
         </div>
@@ -620,15 +620,30 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label" for="setting-model-select">Vision-Language Model</label>
+            <label class="form-label" for="setting-model-select">Vision-Language Model / Reader</label>
             <select id="setting-model-select" class="form-control">
-              <option value="Qwen/Qwen2.5-VL-3B-Instruct">Qwen2.5-VL-3B-Instruct (Default Fast Local VLM)</option>
-              <option value="Qwen/Qwen2.5-VL-7B-Instruct" selected>Qwen2.5-VL-7B-Instruct (Recommended)</option>
-              <option value="meta-llama/Llama-3.2-11B-Vision-Instruct">Llama-3.2-11B-Vision-Instruct</option>
-              <option value="openai/gpt-4o-mini">OpenAI GPT-4o-mini (Multimodal API)</option>
-              <option value="google/gemini-1.5-flash">Google Gemini 1.5 Flash (Multimodal API)</option>
-              <option value="google/gemini-2.0-flash">Google Gemini 2.0 Flash (Multimodal API)</option>
+              <optgroup label="OpenCode Free Tier (Connected Bridge)">
+                <option value="opencode/deepseek-v4.1-flash-free" selected>DeepSeek v4.1 Flash (OpenCode Free Tier)</option>
+                <option value="opencode/glm-5.3-flash-free">GLM-5.3 Flash (OpenCode Free Tier)</option>
+              </optgroup>
+              <optgroup label="Local Open Weights">
+                <option value="Qwen/Qwen2.5-VL-7B-Instruct">Qwen2.5-VL 7B Instruct (Recommended Local)</option>
+                <option value="Qwen/Qwen2.5-VL-3B-Instruct">Qwen2.5-VL 3B Instruct (Fast Local)</option>
+                <option value="meta-llama/Llama-3.2-11B-Vision-Instruct">Llama-3.2 11B Vision Instruct</option>
+              </optgroup>
+              <optgroup label="Cloud Multimodal APIs">
+                <option value="openai/gpt-4o-mini">OpenAI GPT-4o-mini</option>
+                <option value="google/gemini-1.5-flash">Google Gemini 1.5 Flash</option>
+                <option value="google/gemini-2.0-flash">Google Gemini 2.0 Flash</option>
+              </optgroup>
             </select>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Use OpenCode free-tier models or point to local/cloud multimodal backends.</div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="setting-vlm-bridge">Custom VLM / OpenCode Bridge URL</label>
+            <input type="text" id="setting-vlm-bridge" class="form-control" placeholder="http://localhost:18787/v1 or http://localhost:11434/v1">
+            <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">OpenAI-compatible bridge endpoint (leave empty to use default server configuration).</div>
           </div>
 
           <div class="form-group">

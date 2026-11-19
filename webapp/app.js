@@ -9,6 +9,7 @@
 // ── Application State ────────────────────────────────────────────────────────
 const state = {
   apiBase: localStorage.getItem('rag_api_base') || 'http://localhost:8000',
+  vlmBridgeUrl: localStorage.getItem('rag_vlm_bridge_url') || '',
   activeView: 'query',
   uploadedFile: null,
   filePath: '',
@@ -16,7 +17,7 @@ const state = {
   quantization: 'binary_quantized',
   topK: 2,
   includeImages: true,
-  model: 'Qwen/Qwen2.5-VL-7B-Instruct',
+  model: localStorage.getItem('rag_active_model') || 'opencode/deepseek-v4.1-flash-free',
   ingesting: false,
   querying: false,
   zoomLevel: 1.0,
@@ -484,7 +485,8 @@ async function submitQuery() {
         collection_name: $('#collection-name').value.trim() || 'multimodal_docs',
         top_k: state.topK,
         model: state.model,
-        include_images: state.includeImages
+        include_images: state.includeImages,
+        vlm_endpoint: state.vlmBridgeUrl || undefined
       })
     });
   } catch (err) {
@@ -740,6 +742,7 @@ function initLayoutToggles() {
   const modal = $('#modal-settings');
   $('#btn-open-settings').addEventListener('click', () => {
     $('#setting-api-url').value = state.apiBase;
+    $('#setting-vlm-bridge').value = state.vlmBridgeUrl;
     $('#setting-model-select').value = state.model;
     $('#setting-topk').value = state.topK;
     $('#setting-topk-display').textContent = state.topK;
@@ -761,13 +764,16 @@ function initLayoutToggles() {
   $('#btn-save-settings').addEventListener('click', () => {
     state.apiBase = $('#setting-api-url').value.trim();
     localStorage.setItem('rag_api_base', state.apiBase);
+    state.vlmBridgeUrl = $('#setting-vlm-bridge').value.trim();
+    localStorage.setItem('rag_vlm_bridge_url', state.vlmBridgeUrl);
     state.model = $('#setting-model-select').value;
+    localStorage.setItem('rag_active_model', state.model);
     state.topK = parseInt($('#setting-topk').value, 10);
     $('#dock-topk-val').textContent = state.topK;
     $('#active-model-name').textContent = state.model.split('/').pop();
     modal.classList.remove('active');
     checkHealth();
-    toast('Settings saved successfully.', 'success');
+    toast(`Active Model: ${state.model.split('/').pop()}`, 'success');
   });
 
   // Model badge click in header
