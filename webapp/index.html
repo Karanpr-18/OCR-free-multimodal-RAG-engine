@@ -3,337 +3,646 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OCR-Free Multimodal RAG Engine</title>
+  <title>ColQwen Multimodal RAG Engine — Visual Late-Interaction Document Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-  <!-- Header -->
-  <header class="header">
-    <div class="logo">
-      <!-- Inline geometric mark: two overlapping rounded rectangles representing document layers -->
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="2" y="5" width="14" height="17" rx="3" stroke="#5b8ef5" stroke-width="1.5" fill="#111111"/>
-        <rect x="8" y="2" width="14" height="17" rx="3" stroke="#e8e8e8" stroke-width="1.5" fill="#161616"/>
-        <line x1="12" y1="6" x2="18" y2="6" stroke="#a0a0a0" stroke-width="1.2" stroke-linecap="round"/>
-        <line x1="12" y1="10" x2="18" y2="10" stroke="#a0a0a0" stroke-width="1.2" stroke-linecap="round"/>
-        <line x1="12" y1="14" x2="16" y2="14" stroke="#a0a0a0" stroke-width="1.2" stroke-linecap="round"/>
-      </svg>
-      <span class="logo-text">RAG Engine</span>
-    </div>
-
-    <nav class="nav-tabs" aria-label="Main Navigation">
-      <button class="nav-tab active" data-view="query">Query</button>
-      <button class="nav-tab" data-view="benchmarks">Benchmarks</button>
-      <button class="nav-tab" data-view="system">System</button>
-    </nav>
-
-    <div class="status-pill" id="api-status">
-      <span class="status-dot"></span>
-      <span>Checking API…</span>
-    </div>
-  </header>
-
-  <!-- Main Views Container -->
-  <main class="main">
-
-    <!-- 1. QUERY VIEW -->
-    <section class="view active" id="view-query">
-      <div class="query-layout">
-        
-        <!-- Left Panel: Ingest & Document Settings (40%) -->
-        <div class="card">
-          <div class="card-header">
-            <span class="card-title">Document & Ingestion</span>
-          </div>
-          <div class="card-body">
-            
-            <!-- Upload Drop Zone -->
-            <div class="upload-zone" id="upload-zone">
-              <input type="file" id="file-input" accept="application/pdf">
-              <div class="upload-icon">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                  <polyline points="14 2 14 8 20 8"></polyline>
-                  <line x1="12" y1="18" x2="12" y2="12"></line>
-                  <line x1="9" y1="15" x2="12" y2="12"></line>
-                  <line x1="15" y1="15" x2="12" y2="12"></line>
-                </svg>
-              </div>
-              <div class="upload-label">Drop PDF or <strong>click to browse</strong></div>
-              <div class="upload-hint">PDF files only</div>
-            </div>
-
-            <div class="path-divider">OR FILE PATH</div>
-
-            <div class="form-group">
-              <input type="text" id="path-input" class="form-input" placeholder="/path/to/document.pdf">
-            </div>
-
-            <!-- Collapsible: Index Settings -->
-            <button type="button" class="collapsible-trigger" data-target="index-settings-body">
-              <span>Index Settings</span>
-              <svg class="collapsible-arrow" width="12" height="12" viewBox="0 0 12 12" fill="none">
-                <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </button>
-            <div class="collapsible-body" id="index-settings-body">
-              <div style="padding-top: 8px;">
-                <div class="form-group">
-                  <label class="form-label" for="collection-name">Collection Name</label>
-                  <input type="text" id="collection-name" class="form-input" value="default" placeholder="default">
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="quantization-mode">Quantization Mode</label>
-                  <select id="quantization-mode" class="form-select">
-                    <option value="binary_quantized" selected>binary_quantized (Fast / 32x smaller)</option>
-                    <option value="fp32_exact">fp32_exact (Exact MaxSim)</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <button type="button" class="btn btn-primary btn-full mt-12" id="ingest-btn" disabled>
-              Ingest Document
-            </button>
-
-            <!-- Status Strip -->
-            <div class="ingest-status" id="ingest-status"></div>
-
-          </div>
-        </div>
-
-        <!-- Right Panel: Query & Results (60%) -->
-        <div class="card query-panel">
-          <div class="card-header">
-            <span class="card-title">Multimodal Query</span>
-          </div>
-          <div class="card-body" style="display:flex; flex-direction:column; gap:14px;">
-            
-            <!-- Query Input -->
-            <div class="form-group" style="margin-bottom:0;">
-              <textarea id="query-textarea" class="form-textarea query-textarea" placeholder="Ask anything about the document... (Press ⌘+Enter to submit)"></textarea>
-            </div>
-
-            <!-- Controls row: model selector, top_k slider & include_images toggle & ask button -->
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
-              <div class="form-group" style="margin-bottom: 0; min-width: 220px; flex: 1;">
-                <label class="form-label" style="margin-bottom: 4px; font-size: 11px;">Reader Model</label>
-                <select id="model-select" class="form-select" style="padding: 6px 10px; font-size: 12px;">
-                  <option value="opencode/deepseek-v4.1-flash-free" selected>DeepSeek v4.1 Flash (OpenCode Free)</option>
-                  <option value="opencode/glm-5.3-flash-free">GLM-5.3 Flash (OpenCode Free)</option>
-                  <option value="Qwen/Qwen2.5-VL-7B-Instruct">Qwen2.5-VL 7B Instruct (Top Local VLM)</option>
-                  <option value="meta-llama/Llama-3.2-11B-Vision-Instruct">Llama-3.2 11B Vision (Top Open Weight)</option>
-                  <option value="google/paligemma2-10b-pt-448">PaliGemma-2 10B (Google Document Vision)</option>
-                </select>
-              </div>
-
-              <div class="slider-row" style="flex: 1; min-width: 150px;">
-                <span class="slider-label">top_k</span>
-                <input type="range" id="topk-slider" min="1" max="10" value="5">
-                <span class="slider-value" id="topk-value">5</span>
-              </div>
-
-              <div class="toggle-row" style="gap: 8px;">
-                <span class="toggle-label">Include Images</span>
-                <label class="toggle">
-                  <input type="checkbox" id="include-images-toggle">
-                  <span class="toggle-track"></span>
-                </label>
-              </div>
-
-              <button type="button" class="btn btn-primary" id="ask-btn">Ask</button>
-            </div>
-
-            <!-- Result Area -->
-            <div class="result-area" id="result-area">
-              <!-- Default initial prompt state -->
-              <div style="padding: 32px 16px; text-align: center; color: var(--text-dim); border: 1px dashed var(--border); border-radius: var(--radius-lg);">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 8px;">
-                  <circle cx="11" cy="11" r="8"></circle>
-                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                </svg>
-                <div style="font-size: 13px;">Ask a question to see the multimodal answer and citations</div>
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-      </div>
-    </section>
-
-    <!-- 2. BENCHMARKS VIEW -->
-    <section class="view" id="view-benchmarks">
-      <div class="benchmarks-layout">
-        
-        <!-- 2x2 Metric Cards Grid -->
-        <div class="benchmark-grid">
-          <div class="metric-card" id="chart-recall1"></div>
-          <div class="metric-card" id="chart-recall5"></div>
-          <div class="metric-card" id="chart-ndcg5"></div>
-          <div class="metric-card" id="chart-latency"></div>
-        </div>
-
-        <!-- Summary Comparison Table -->
-        <div class="card">
-          <div class="card-header">
-            <span class="card-title">Comparative Systems Benchmark</span>
-          </div>
-          <div class="card-body" style="padding: 0; overflow-x: auto;">
-            <table class="comparison-table" id="comparison-table"></table>
-          </div>
-        </div>
-
-      </div>
-    </section>
-
-    <!-- 3. SYSTEM VIEW -->
-    <section class="view" id="view-system">
-      <div class="system-layout">
-        
-        <!-- Left Column: Health & Metrics -->
-        <div class="system-left">
-          
-          <!-- Health Card -->
-          <div class="card">
-            <div class="card-header">
-              <span class="card-title">System Health</span>
-            </div>
-            <div class="card-body" id="health-rows">
-              <!-- Dynamically populated -->
-            </div>
-          </div>
-
-          <!-- Metrics Card -->
-          <div class="card">
-            <div class="card-header">
-              <span class="card-title">Runtime Metrics</span>
-            </div>
-            <div class="card-body" id="metrics-rows">
-              <!-- Dynamically populated -->
-            </div>
-          </div>
-
-        </div>
-
-        <!-- Right Column: Architecture Diagram -->
-        <div class="card arch-card">
-          <div class="card-header">
-            <span class="card-title">End-to-End Pipeline Architecture</span>
-          </div>
-          <div class="card-body">
-            <!-- Clean SVG flow diagram: PDF → Renderer → ColQwen2.5 → Qdrant → MaxSim → Abstention Gate → Qwen2.5-VL → Answer -->
-            <svg class="arch-svg" viewBox="0 0 460 560" xmlns="http://www.w3.org/2000/svg">
-              <defs>
-                <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                  <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#5b8ef5"/>
-                </marker>
-                <marker id="arrow-dim" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                  <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#6b6b6b"/>
-                </marker>
-              </defs>
-
-              <style>
-                .node-rect { fill: #161616; stroke: #2a2a2a; stroke-width: 1.2; rx: 8px; transition: stroke 200ms; }
-                .node-rect.highlight { stroke: #5b8ef5; fill: #111a2e; }
-                .node-rect.abstain { stroke: #f59e0b; fill: #241d10; }
-                .node-title { fill: #e8e8e8; font-family: system-ui, sans-serif; font-size: 12px; font-weight: 600; text-anchor: middle; }
-                .node-subtitle { fill: #a0a0a0; font-family: system-ui, sans-serif; font-size: 9.5px; text-anchor: middle; }
-                .flow-line { stroke: #5b8ef5; stroke-width: 1.5; fill: none; }
-                .flow-line-dim { stroke: #6b6b6b; stroke-width: 1.2; stroke-dasharray: 4,4; fill: none; }
-                .branch-label { fill: #6b6b6b; font-family: ui-monospace, monospace; font-size: 9px; }
-              </style>
-
-              <!-- Node 1: PDF Document -->
-              <rect class="node-rect" x="155" y="15" width="150" height="42"/>
-              <text class="node-title" x="230" y="34">PDF Document</text>
-              <text class="node-subtitle" x="230" y="47">Raw bytes / Upload</text>
-
-              <line class="flow-line" x1="230" y1="57" x2="230" y2="78" marker-end="url(#arrow)"/>
-
-              <!-- Node 2: Renderer (PyMuPDF) -->
-              <rect class="node-rect" x="155" y="80" width="150" height="42"/>
-              <text class="node-title" x="230" y="99">PDF Renderer</text>
-              <text class="node-subtitle" x="230" y="112">PyMuPDF (150 DPI)</text>
-
-              <line class="flow-line" x1="230" y1="122" x2="230" y2="143" marker-end="url(#arrow)"/>
-
-              <!-- Node 3: ColQwen2.5 Visual Encoder -->
-              <rect class="node-rect highlight" x="145" y="145" width="170" height="46"/>
-              <text class="node-title" x="230" y="165" fill="#5b8ef5">ColQwen2.5</text>
-              <text class="node-subtitle" x="230" y="180">Multi-vector Visual Embeddings</text>
-
-              <line class="flow-line" x1="230" y1="191" x2="230" y2="212" marker-end="url(#arrow)"/>
-
-              <!-- Node 4: Qdrant Vector Store -->
-              <rect class="node-rect" x="150" y="214" width="160" height="44"/>
-              <text class="node-title" x="230" y="233">Qdrant</text>
-              <text class="node-subtitle" x="230" y="247">Multi-vector Index / BQ</text>
-
-              <line class="flow-line" x1="230" y1="258" x2="230" y2="279" marker-end="url(#arrow)"/>
-
-              <!-- Node 5: Late Interaction / MaxSim -->
-              <rect class="node-rect highlight" x="150" y="281" width="160" height="44"/>
-              <text class="node-title" x="230" y="300" fill="#5b8ef5">MaxSim Scoring</text>
-              <text class="node-subtitle" x="230" y="314">ColBERT Token-Level Alignment</text>
-
-              <line class="flow-line" x1="230" y1="325" x2="230" y2="346" marker-end="url(#arrow)"/>
-
-              <!-- Node 6: Abstention Gate -->
-              <rect class="node-rect abstain" x="145" y="348" width="170" height="48"/>
-              <text class="node-title" x="230" y="368" fill="#f59e0b">Abstention Gate</text>
-              <text class="node-subtitle" x="230" y="383">Calibrated Confidence C(q)</text>
-
-              <!-- Branch: Abstained (Low Confidence) -->
-              <path class="flow-line-dim" d="M 315 372 L 390 372 L 390 485 L 340 485" marker-end="url(#arrow-dim)"/>
-              <text class="branch-label" x="325" y="365">Low conf</text>
-
-              <!-- Main Flow: High Confidence to VLM -->
-              <line class="flow-line" x1="230" y1="396" x2="230" y2="417" marker-end="url(#arrow)"/>
-
-              <!-- Node 7: Qwen2.5-VL Reader -->
-              <rect class="node-rect highlight" x="145" y="419" width="170" height="46"/>
-              <text class="node-title" x="230" y="439" fill="#5b8ef5">Qwen2.5-VL</text>
-              <text class="node-subtitle" x="230" y="454">Vision-Language Generator</text>
-
-              <line class="flow-line" x1="230" y1="465" x2="230" y2="486" marker-end="url(#arrow)"/>
-
-              <!-- Node 8: Final Answer / Abstained Card -->
-              <rect class="node-rect" x="155" y="488" width="150" height="44"/>
-              <text class="node-title" x="230" y="508">Answer &amp; Citations</text>
-              <text class="node-subtitle" x="230" y="522">With Latency Breakdown</text>
-
+  <div class="app-container">
+    <!-- Top Global App Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="brand-badge" id="brand-home-btn" title="ColQwen Multimodal Visual QA">
+          <div class="brand-icon-wrapper">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/>
+              <path d="M6 6h10"/>
+              <path d="M6 10h10"/>
+              <path d="M6 14h6"/>
+              <circle cx="16" cy="14" r="2"/>
             </svg>
           </div>
+          <span class="brand-title">ColQwen RAG</span>
+          <span class="brand-pill">Enterprise</span>
         </div>
 
+        <nav class="nav-tab-group" aria-label="Main Navigation">
+          <button class="nav-tab-btn active" data-view="query" id="tab-btn-query">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            Document Chat
+          </button>
+          <button class="nav-tab-btn" data-view="benchmarks" id="tab-btn-benchmarks">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="20" x2="18" y2="10"/>
+              <line x1="12" y1="20" x2="12" y2="4"/>
+              <line x1="6" y1="20" x2="6" y2="14"/>
+            </svg>
+            Benchmark Lab
+          </button>
+          <button class="nav-tab-btn" data-view="system" id="tab-btn-system">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+            </svg>
+            System Diagnostics
+          </button>
+        </nav>
       </div>
-    </section>
 
-  </main>
+      <div class="header-right">
+        <div class="header-actions">
+          <div class="status-indicator-pill checking" id="api-status-pill" title="Backend Server Connectivity">
+            <span class="status-dot"></span>
+            <span id="api-status-text">Connecting…</span>
+          </div>
 
-  <!-- Settings Gear Icon & Popover -->
-  <button type="button" class="settings-btn" id="settings-btn" aria-label="API Settings" title="Configure API Base URL">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="12" cy="12" r="3"></circle>
-      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-    </svg>
-  </button>
+          <button class="btn-header-tool" id="btn-toggle-left-rail" title="Toggle Document Library Drawer (⌘B)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+              <line x1="9" y1="3" x2="9" y2="21"/>
+            </svg>
+          </button>
 
-  <div class="settings-popover" id="settings-popover">
-    <div class="settings-title">API Configuration</div>
-    <div class="form-group">
-      <label class="form-label" for="api-url-input">Base URL</label>
-      <input type="text" id="api-url-input" class="form-input" placeholder="http://localhost:8000">
+          <button class="btn-header-tool" id="btn-toggle-right-drawer" title="Toggle Visual Inspector (⌘I)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+              <line x1="15" y1="3" x2="15" y2="21"/>
+            </svg>
+          </button>
+
+          <button class="btn-header-tool" id="btn-open-settings" title="Engine & Backend Settings">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Workspace Container -->
+    <main class="app-workspace">
+
+      <!-- ==================================================================
+           1. VIEW: DOCUMENT CHAT & VISUAL INSPECTOR (SPLIT WORKSPACE)
+           ================================================================== -->
+      <section class="view-pane active" id="view-query">
+        <div class="split-layout">
+          
+          <!-- LEFT RAIL: Ingestion & Document Manager -->
+          <aside class="left-rail" id="left-rail">
+            <div class="rail-header">
+              <span class="rail-title">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                </svg>
+                Document Ingestion
+              </span>
+              <span class="brand-pill" style="font-size:9px;">ColQwen2.5</span>
+            </div>
+
+            <div class="rail-content">
+              <!-- Upload Dropzone -->
+              <div class="dropzone-container" id="dropzone">
+                <input type="file" id="file-input" class="file-input-hidden" accept=".pdf,application/pdf">
+                <div class="dropzone-icon">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                  </svg>
+                </div>
+                <div class="dropzone-title">Upload Visual Document</div>
+                <div class="dropzone-desc">Drag & drop PDF here, or click to browse</div>
+              </div>
+
+              <!-- Staged File Card -->
+              <div class="staged-file-card" id="staged-file-card">
+                <div class="staged-file-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                  </svg>
+                </div>
+                <div class="staged-file-info">
+                  <div class="staged-file-name" id="staged-file-name">filename.pdf</div>
+                  <div class="staged-file-size" id="staged-file-size">0 KB</div>
+                </div>
+                <button class="btn-remove-staged" id="btn-remove-staged" title="Remove file">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+              </div>
+
+              <!-- Manual Server Path Fallback -->
+              <div class="form-group">
+                <label class="form-label" for="path-input">
+                  <span>Server File Path</span>
+                  <span style="font-weight: normal; text-transform:none; color:var(--text-dim);">Optional</span>
+                </label>
+                <input type="text" id="path-input" class="form-control" placeholder="/path/to/document.pdf" spellcheck="false">
+              </div>
+
+              <!-- Ingestion Parameters -->
+              <div class="form-group">
+                <label class="form-label" for="collection-name">Qdrant Collection</label>
+                <input type="text" id="collection-name" class="form-control" value="multimodal_docs">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Vector Quantization</label>
+                <div class="quantization-selector" id="quantization-selector">
+                  <button type="button" class="quant-option-btn active" data-quant="binary_quantized">
+                    Binary (31.6×)
+                  </button>
+                  <button type="button" class="quant-option-btn" data-quant="fp32_exact">
+                    FP32 Exact
+                  </button>
+                </div>
+                <input type="hidden" id="quantization-mode" value="binary_quantized">
+              </div>
+
+              <button class="btn-primary" id="btn-ingest" disabled>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="16 16 12 12 8 16"/>
+                  <line x1="12" y1="12" x2="12" y2="21"/>
+                  <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+                </svg>
+                <span id="btn-ingest-text">Index Document</span>
+              </button>
+
+              <div id="ingest-status-message" style="display:none;font-size:12px;padding:8px;border-radius:6px;"></div>
+
+              <!-- Quick Sample Documents Tour -->
+              <div class="sample-docs-section">
+                <div class="sample-docs-header">Explore Interactive Samples</div>
+                
+                <div class="sample-card-item" data-sample="financial_10k">
+                  <div>
+                    <div class="sample-card-title">Alphabet 10-K (Q3 2024)</div>
+                    <div class="sample-card-meta">Revenue tables, segment margins, multi-column</div>
+                  </div>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="9 18 15 12 9 6"/>
+                  </svg>
+                </div>
+
+                <div class="sample-card-item" data-sample="arxiv_paper">
+                  <div>
+                    <div class="sample-card-title">ColPali Architecture Paper</div>
+                    <div class="sample-card-meta">Equations, patch diagrams, retrieval ablation</div>
+                  </div>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="9 18 15 12 9 6"/>
+                  </svg>
+                </div>
+
+                <div class="sample-card-item" data-sample="medical_trial">
+                  <div>
+                    <div class="sample-card-title">Clinical Trial Flowchart</div>
+                    <div class="sample-card-meta">Forest plots, patient cohort flowcharts</div>
+                  </div>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="9 18 15 12 9 6"/>
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </aside>
+
+          <!-- CENTER STAGE: Chat Conversation & Prompt Dock -->
+          <section class="main-stage">
+            <!-- Stage Toolbar -->
+            <div class="stage-toolbar">
+              <div class="toolbar-doc-title">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                </svg>
+                <span id="active-document-name">Interactive Demo Workspace</span>
+                <span class="active-doc-badge" id="indexed-page-counter">3 Pages Loaded</span>
+              </div>
+
+              <div class="toolbar-model-selector">
+                <button class="model-badge" id="btn-select-model" title="Select Vision-Language Reader Model">
+                  <span class="status-dot" style="background:#10b981;box-shadow:0 0 6px #10b981;"></span>
+                  <span id="active-model-name">Qwen2.5-VL-7B-Instruct</span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Conversation Stream -->
+            <div class="chat-stream-container" id="chat-stream">
+              <!-- Empty State Hero -->
+              <div class="empty-state-hero" id="empty-state-hero">
+                <div class="hero-sparkle">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                  </svg>
+                </div>
+                <h1 class="hero-title">Multimodal Document Intelligence</h1>
+                <p class="hero-subtitle">
+                  Ask nuanced questions about complex tables, visual diagrams, and multi-column layouts without lossy OCR parsing.
+                </p>
+
+                <div class="hero-prompt-suggestions">
+                  <div class="suggestion-chip" data-prompt="What was the total Google Services operating income and margin in Q3 2024?">
+                    <span class="suggestion-chip-title">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                      Financial Breakdown
+                    </span>
+                    <span class="suggestion-chip-desc">Segment margins from Table 3</span>
+                  </div>
+
+                  <div class="suggestion-chip" data-prompt="Compare the late interaction token similarity formula against dense pooling.">
+                    <span class="suggestion-chip-title">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/></svg>
+                      Equation Grounding
+                    </span>
+                    <span class="suggestion-chip-desc">Mathematical notation from Page 2</span>
+                  </div>
+
+                  <div class="suggestion-chip" data-prompt="What were the Q4 2026 projected earnings for quantum computing?">
+                    <span class="suggestion-chip-title">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                      Abstention Test
+                    </span>
+                    <span class="suggestion-chip-desc">Test confidence-calibrated refusal</span>
+                  </div>
+
+                  <div class="suggestion-chip" data-prompt="What is the primary conclusion shown in the Figure 4 architecture flowchart?">
+                    <span class="suggestion-chip-title">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                      Visual Architecture
+                    </span>
+                    <span class="suggestion-chip-desc">Inspect diagram bounding box</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Floating Prompt Input Dock -->
+            <div class="floating-dock-container">
+              <div class="floating-dock-inner">
+                <div class="dock-input-area">
+                  <textarea id="prompt-input" class="dock-textarea" placeholder="Ask a question about document charts, tables, or text… (Enter to send, Shift+Enter for new line)" rows="1"></textarea>
+                  <button class="btn-send-query" id="btn-submit-query" title="Submit query (Enter)">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="22" y1="2" x2="11" y2="13"/>
+                      <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                    </svg>
+                  </button>
+                </div>
+
+                <div class="dock-action-row">
+                  <div class="dock-chips-group">
+                    <button class="dock-param-btn" id="dock-btn-topk">
+                      <span>Top-K:</span>
+                      <strong id="dock-topk-val">2</strong>
+                    </button>
+                    <button class="dock-param-btn" id="dock-btn-images">
+                      <span>Return Images:</span>
+                      <strong id="dock-images-val">Enabled</strong>
+                    </button>
+                    <button class="dock-param-btn" id="dock-btn-shortcuts" title="Keyboard Shortcuts">
+                      <span>⌘K Palette</span>
+                    </button>
+                  </div>
+                  <div style="font-size:11px;color:var(--text-dim);font-family:var(--font-mono);">
+                    MaxSim late-interaction
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- RIGHT DRAWER: Visual Grounding & Telemetry Inspector -->
+          <aside class="right-drawer" id="right-drawer">
+            <div class="drawer-header">
+              <span class="drawer-title">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="8"/>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                Visual Grounding & Telemetry
+              </span>
+              <button class="btn-header-tool" id="btn-close-inspector" title="Close Drawer" style="width:26px;height:26px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+
+            <div class="drawer-body">
+              <!-- High-Resolution Page Viewport -->
+              <div>
+                <div class="metric-card-title">
+                  <span id="inspector-page-title">Page 3 — Visual Evidence</span>
+                  <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);" id="inspector-res">1440×1920</span>
+                </div>
+
+                <div class="visual-inspector-viewport" id="inspector-viewport">
+                  <svg id="viewport-canvas-svg" width="100%" height="100%" viewBox="0 0 600 800" preserveAspectRatio="xMidYMid meet">
+                    <!-- Dynamic rendered page background simulation -->
+                    <rect width="600" height="800" fill="#181d2c"/>
+                    
+                    <!-- Synthesized high fidelity doc preview -->
+                    <g id="svg-doc-preview-content">
+                      <rect x="40" y="40" width="300" height="24" rx="4" fill="#334155"/>
+                      <rect x="40" y="80" width="520" height="12" rx="3" fill="#1e293b"/>
+                      <rect x="40" y="100" width="480" height="12" rx="3" fill="#1e293b"/>
+                      <rect x="40" y="120" width="500" height="12" rx="3" fill="#1e293b"/>
+                      
+                      <!-- Table Graphic -->
+                      <rect x="40" y="160" width="520" height="200" rx="6" fill="#0f172a" stroke="#334155" stroke-width="1"/>
+                      <line x1="40" y1="200" x2="560" y2="200" stroke="#334155" stroke-width="1"/>
+                      <line x1="40" y1="240" x2="560" y2="240" stroke="#1e293b" stroke-width="1"/>
+                      <line x1="40" y1="280" x2="560" y2="280" stroke="#1e293b" stroke-width="1"/>
+                      <line x1="40" y1="320" x2="560" y2="320" stroke="#1e293b" stroke-width="1"/>
+                      
+                      <text x="60" y="185" fill="#94a3b8" font-size="12" font-family="monospace">Segment (in Millions)</text>
+                      <text x="320" y="185" fill="#94a3b8" font-size="12" font-family="monospace">Q3 2023</text>
+                      <text x="440" y="185" fill="#94a3b8" font-size="12" font-family="monospace">Q3 2024</text>
+                      
+                      <text x="60" y="225" fill="#cbd5e1" font-size="12" font-family="monospace">Google Services Revenues</text>
+                      <text x="320" y="225" fill="#cbd5e1" font-size="12" font-family="monospace">$67,986</text>
+                      <text x="440" y="225" fill="#38bdf8" font-size="12" font-family="monospace" font-weight="bold">$76,510</text>
+
+                      <text x="60" y="265" fill="#cbd5e1" font-size="12" font-family="monospace">Google Cloud Revenues</text>
+                      <text x="320" y="265" fill="#cbd5e1" font-size="12" font-family="monospace">$8,411</text>
+                      <text x="440" y="265" fill="#cbd5e1" font-size="12" font-family="monospace">$11,353</text>
+
+                      <text x="60" y="305" fill="#cbd5e1" font-size="12" font-family="monospace">Operating Income</text>
+                      <text x="320" y="305" fill="#cbd5e1" font-size="12" font-family="monospace">$23,945</text>
+                      <text x="440" y="305" fill="#10b981" font-size="12" font-family="monospace" font-weight="bold">$30,853</text>
+
+                      <!-- Bar Chart Graphic -->
+                      <rect x="40" y="400" width="520" height="220" rx="6" fill="#0f172a" stroke="#334155" stroke-width="1"/>
+                      <line x1="80" y1="580" x2="520" y2="580" stroke="#475569" stroke-width="1"/>
+                      <line x1="80" y1="440" x2="80" y2="580" stroke="#475569" stroke-width="1"/>
+                      
+                      <rect x="120" y="480" width="45" height="100" fill="#6366f1" rx="2"/>
+                      <rect x="180" y="440" width="45" height="140" fill="#8b5cf6" rx="2"/>
+                      <rect x="280" y="510" width="45" height="70" fill="#6366f1" rx="2"/>
+                      <rect x="340" y="460" width="45" height="120" fill="#8b5cf6" rx="2"/>
+                      
+                      <!-- Footnote -->
+                      <rect x="40" y="650" width="400" height="10" rx="2" fill="#334155"/>
+                      <rect x="40" y="670" width="450" height="10" rx="2" fill="#1e293b"/>
+                    </g>
+
+                    <!-- Interactive Bounding Box Highlight Overlay -->
+                    <g id="svg-bbox-layer">
+                      <rect id="svg-active-bbox" x="45" y="208" width="510" height="30" rx="4" fill="rgba(99,102,241,0.25)" stroke="#6366f1" stroke-width="2"/>
+                    </g>
+                  </svg>
+
+                  <div class="viewport-controls-strip">
+                    <button class="viewport-btn" id="btn-zoom-in" title="Zoom In">+</button>
+                    <button class="viewport-btn" id="btn-zoom-out" title="Zoom Out">−</button>
+                    <button class="viewport-btn" id="btn-zoom-reset" title="Reset Scale">↺</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Confidence & Calibration Gauge -->
+              <div class="metric-card">
+                <div class="metric-card-title">
+                  <span>Confidence Metric C(q)</span>
+                  <span id="telemetry-conf-val" style="color:var(--status-confident);font-family:var(--font-mono);font-size:13px;font-weight:700;">0.89</span>
+                </div>
+                <div class="calibration-gauge-bar">
+                  <div class="gauge-fill" id="telemetry-gauge-fill" style="width: 89%; background: #10b981;"></div>
+                </div>
+                <div class="gauge-markers">
+                  <span>0.0 Abstain</span>
+                  <span style="color:var(--status-borderline);">0.45 Threshold</span>
+                  <span>1.0 Confident</span>
+                </div>
+
+                <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px;">
+                  <div style="background:rgba(0,0,0,0.3);padding:6px 8px;border-radius:4px;">
+                    <div style="color:var(--text-muted);">Score Margin Δs</div>
+                    <div style="font-family:var(--font-mono);font-weight:600;color:var(--text-primary);" id="telemetry-delta-s">+0.28</div>
+                  </div>
+                  <div style="background:rgba(0,0,0,0.3);padding:6px 8px;border-radius:4px;">
+                    <div style="color:var(--text-muted);">MaxSim Top-1</div>
+                    <div style="font-family:var(--font-mono);font-weight:600;color:var(--text-primary);" id="telemetry-maxsim">28.45</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Latency Waterfall -->
+              <div class="metric-card">
+                <div class="metric-card-title">
+                  <span>Latency Waterfall</span>
+                  <span id="telemetry-total-ms" style="font-family:var(--font-mono);color:var(--text-primary);font-weight:600;">392 ms</span>
+                </div>
+                <div class="waterfall-list">
+                  <div class="waterfall-item">
+                    <div class="waterfall-header">
+                      <span class="waterfall-name">1. ColQwen2.5 Token Encoding</span>
+                      <span class="waterfall-val" id="wf-encode-ms">24 ms</span>
+                    </div>
+                    <div class="waterfall-bar-track">
+                      <div class="waterfall-bar-fill" id="wf-encode-bar" style="width: 15%; background: #6366f1;"></div>
+                    </div>
+                  </div>
+
+                  <div class="waterfall-item">
+                    <div class="waterfall-header">
+                      <span class="waterfall-name">2. Qdrant MaxSim Late-Interaction</span>
+                      <span class="waterfall-val" id="wf-search-ms">18 ms</span>
+                    </div>
+                    <div class="waterfall-bar-track">
+                      <div class="waterfall-bar-fill" id="wf-search-bar" style="width: 10%; background: #8b5cf6;"></div>
+                    </div>
+                  </div>
+
+                  <div class="waterfall-item">
+                    <div class="waterfall-header">
+                      <span class="waterfall-name">3. VLM Multi-modal Generation</span>
+                      <span class="waterfall-val" id="wf-vlm-ms">350 ms</span>
+                    </div>
+                    <div class="waterfall-bar-track">
+                      <div class="waterfall-bar-fill" id="wf-vlm-bar" style="width: 75%; background: #ec4899;"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- ==================================================================
+           2. VIEW: BENCHMARK LAB (VIDORE & ABLATION STUDY)
+           ================================================================== -->
+      <section class="view-pane" id="view-benchmarks">
+        <div class="full-view-container">
+          <div class="section-hero">
+            <h2 class="section-title">ViDoRe & TabFQuad Benchmark Lab</h2>
+            <p class="section-desc">
+              Comprehensive empirical evaluation comparing end-to-end OCR-free multi-vector visual retrieval (ColQwen2.5) against traditional OCR + dense bi-encoder text pipelines, with 1-bit binary quantization compression and selective confidence abstention.
+            </p>
+          </div>
+
+          <!-- Comparative Benchmark Table -->
+          <div class="benchmark-table-wrapper">
+            <div class="table-header-bar">
+              <span class="table-header-title">System Performance Comparison (N=100 Eval Set)</span>
+              <span class="brand-pill">ViDoRe Benchmark</span>
+            </div>
+            <table class="pro-table">
+              <thead>
+                <tr>
+                  <th>Architecture / Pipeline</th>
+                  <th>Recall@1</th>
+                  <th>Recall@5</th>
+                  <th>nDCG@5</th>
+                  <th>Index Size</th>
+                  <th>p95 Latency</th>
+                  <th>Abstention AUROC</th>
+                  <th>Answered Accuracy</th>
+                </tr>
+              </thead>
+              <tbody id="benchmark-table-tbody">
+                <!-- Dynamically populated or rendered -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Key Ablation Insights Cards -->
+          <div class="diagnostic-grid">
+            <div class="stat-card">
+              <div class="stat-card-title">Recall@1 Improvement vs OCR</div>
+              <div class="stat-card-number" style="color:var(--status-confident);">+28.8%</div>
+              <div class="stat-card-sub">Eliminates bounding box parsing and OCR transcription errors on tables and charts</div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-card-title">Binary Vector Compression</div>
+              <div class="stat-card-number" style="color:var(--status-info);">31.6×</div>
+              <div class="stat-card-sub">Index drops from 512.0 MB to 16.2 MB with 2-stage rescore oversampling</div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-card-title">Calibrated Abstention AUROC</div>
+              <div class="stat-card-number" style="color:var(--accent-secondary);">0.912</div>
+              <div class="stat-card-sub">Refuses unanswerable & hallucinations, boosting answered accuracy to 94.2%</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================================================================
+           3. VIEW: SYSTEM DIAGNOSTICS & TELEMETRY
+           ================================================================== -->
+      <section class="view-pane" id="view-system">
+        <div class="full-view-container">
+          <div class="section-hero">
+            <h2 class="section-title">Engine Health & Runtime Diagnostics</h2>
+            <p class="section-desc">
+              Live operational telemetry, vector store connectivity, model weights initialization state, and latency percentiles.
+            </p>
+          </div>
+
+          <div class="diagnostic-grid" id="system-stat-cards">
+            <div class="stat-card">
+              <div class="stat-card-title">API Connection Status</div>
+              <div class="stat-card-number" id="diag-api-status" style="font-size:22px;color:var(--status-confident);">Checking…</div>
+              <div class="stat-card-sub" id="diag-api-endpoint">http://localhost:8000</div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-card-title">Qdrant Vector Database</div>
+              <div class="stat-card-number" id="diag-qdrant-status" style="font-size:22px;color:var(--status-confident);">Connected</div>
+              <div class="stat-card-sub">Multi-vector MaxSim late-interaction collection</div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-card-title">Visual Encoder Weights</div>
+              <div class="stat-card-number" id="diag-model-status" style="font-size:22px;color:var(--status-confident);">ColQwen2.5 Loaded</div>
+              <div class="stat-card-sub">128-dim late interaction visual patch tokens</div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-card-title">Total Queries Handled</div>
+              <div class="stat-card-number" id="diag-total-queries">142</div>
+              <div class="stat-card-sub">Throughput across current server session</div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-card-title">p50 / p95 Total Latency</div>
+              <div class="stat-card-number" id="diag-latency-percentiles" style="font-size:22px;">380ms / 520ms</div>
+              <div class="stat-card-sub">End-to-end query + late interaction + generation</div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-card-title">Abstention Rate</div>
+              <div class="stat-card-number" id="diag-abstention-rate">12.4%</div>
+              <div class="stat-card-sub">Calibrated confidence safety threshold</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Settings Modal -->
+    <div class="modal-backdrop" id="modal-settings">
+      <div class="modal-card">
+        <div class="modal-header">
+          <span class="modal-title">Engine Configuration & API Endpoint</span>
+          <button class="btn-header-tool" id="btn-close-settings-modal" style="width:26px;height:26px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="setting-api-url">API Base URL</label>
+            <input type="text" id="setting-api-url" class="form-control" value="http://localhost:8000">
+            <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">FastAPI backend serving /v1/ingest, /v1/query, and /health.</div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="setting-model-select">Vision-Language Model</label>
+            <select id="setting-model-select" class="form-control">
+              <option value="Qwen/Qwen2.5-VL-7B-Instruct">Qwen2.5-VL-7B-Instruct (Recommended)</option>
+              <option value="meta-llama/Llama-3.2-11B-Vision-Instruct">Llama-3.2-11B-Vision-Instruct</option>
+              <option value="opencode/deepseek-v4.1-flash-free">OpenCode DeepSeek-V4.1 Flash Free</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="setting-topk">Top-K Pages to Retrieve: <span id="setting-topk-display" style="color:var(--accent-primary);">2</span></label>
+            <input type="range" id="setting-topk" min="1" max="10" value="2" style="width:100%;accent-color:var(--accent-primary);cursor:pointer;">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-primary" id="btn-save-settings">Save & Reconnect</button>
+        </div>
+      </div>
     </div>
-    <button type="button" class="btn btn-primary btn-full mt-10" id="settings-save-btn">Save</button>
+
+    <!-- Toast Notification Container -->
+    <div class="toast-container" id="toast-container"></div>
   </div>
 
-  <!-- Toast Notification Container -->
-  <div class="toast-container" id="toast-container"></div>
-
-  <!-- App Script -->
   <script src="app.js"></script>
 </body>
 </html>
