@@ -359,15 +359,26 @@ function initIngestion() {
       $('#active-document-name').textContent = docName;
       $('#indexed-page-counter').textContent = `${result.pages_indexed || 1} Pages Indexed`;
     } catch (err) {
-      // Graceful fallback to client demo mode if backend is not running
-      statusMsg.style.background = 'rgba(245, 158, 11, 0.15)';
-      statusMsg.style.color = '#fde68a';
-      statusMsg.innerHTML = `✓ Ingested in Demo Mode (Mock Index Ready)`;
-      toast('Backend unreachable — running simulated visual index.', 'info');
+      console.warn('Backend ingestion notice:', err);
+      const isOffline = err.message && (err.message.includes('Failed to fetch') || err.message.includes('NetworkError') || err.message.includes('Load failed'));
       
-      const docName = state.uploadedFile ? state.uploadedFile.name : (pathInput.value.split('/').pop() || 'Uploaded Document');
-      $('#active-document-name').textContent = docName;
-      $('#indexed-page-counter').textContent = `12 Pages Indexed (Demo)`;
+      if (isOffline) {
+        // Graceful fallback to client demo mode if backend is not running
+        statusMsg.style.background = 'rgba(245, 158, 11, 0.15)';
+        statusMsg.style.color = '#fde68a';
+        statusMsg.innerHTML = `✓ Ingested in Demo Mode (Backend Offline)`;
+        toast('Backend offline — running simulated visual index.', 'info');
+        
+        const docName = state.uploadedFile ? state.uploadedFile.name : (pathInput.value.split('/').pop() || 'Uploaded Document');
+        $('#active-document-name').textContent = docName;
+        $('#indexed-page-counter').textContent = `12 Pages Indexed (Demo)`;
+      } else {
+        // Live backend returned an error response (e.g. 400 or 500)
+        statusMsg.style.background = 'rgba(239, 68, 68, 0.15)';
+        statusMsg.style.color = '#fca5a5';
+        statusMsg.innerHTML = `✗ Ingestion failed: ${err.message}`;
+        toast(`Server error: ${err.message}`, 'error');
+      }
     } finally {
       state.ingesting = false;
       btnIngestText.textContent = 'Index Document';
