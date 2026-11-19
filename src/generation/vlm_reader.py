@@ -30,9 +30,11 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-def _image_to_base64_data(image: Any) -> tuple[str, str]:
+def _image_to_base64_data(image: Any, max_size: int = 1200, quality: int = 85) -> tuple[str, str]:
     """
-    Convert a PIL Image or file path to raw base64 string and mime type.
+    Convert a PIL Image or file path to an optimized base64 JPEG string and mime type.
+    Resizes image to max_size on the longest edge to drastically reduce latency
+    and network payload while preserving document clarity.
 
     Returns:
         tuple (mime_type, base64_data)
@@ -40,18 +42,30 @@ def _image_to_base64_data(image: Any) -> tuple[str, str]:
     if isinstance(image, str):
         if Image is None:
             raise ImportError("Pillow (PIL) is required to load images from paths.")
-        image = Image.open(image).convert("RGB")
-    elif Image is not None and not isinstance(image, Image.Image):
+        img = Image.open(image).convert("RGB")
+    elif Image is not None and isinstance(image, Image.Image):
+        img = image.convert("RGB") if image.mode != "RGB" else image
+    else:
         raise TypeError(f"Expected PIL.Image.Image or path str, got {type(image)}")
 
+    # Downscale high-res images to speed up VLM network transfer & vision tokenization
+    w, h = img.size
+    longest = max(w, h)
+    if longest > max_size:
+        scale = max_size / float(longest)
+        new_w = max(1, int(w * scale))
+        new_h = max(1, int(h * scale))
+        img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+
     buffered = io.BytesIO()
-    image.save(buffered, format="PNG")
+    # JPEG encoding at quality=85 cuts payload size by ~80% compared to raw PNG
+    img.save(buffered, format="JPEG", quality=quality, optimize=True)
     b64_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
-    return "image/png", b64_str
+    return "image/jpeg", b64_str
 
 
 def _image_to_base64(image: Any) -> str:
-    """Convert a PIL Image or file path to a base64-encoded PNG data URI."""
+    """Convert a PIL Image or file path to a base64-encoded JPEG data URI."""
     mime, b64_str = _image_to_base64_data(image)
     return f"data:{mime};base64,{b64_str}"
 
@@ -118,32 +132,30 @@ class VLMReader:
 
         for idx, (img, pid) in enumerate(zip(page_images, page_ids)):
             pil_img = _ensure_pil_image(img)
+            page_num = idx + 1
             user_content.append(
                 {
                     "type": "text",
-                    "text": f"--- Document Page [Page {pid}] (Reference Index {idx + 1}) ---\n",
+                    "text": f"--- Document Page {page_num} [Page {page_num}] (ID: {pid}) ---\n",
                 }
             )
             user_content.append({"type": "image", "image": pil_img})
 
         instructions = (
-            f"\nQuestion: {query}\n\n"
-            "Instructions:\n"
-            "1. Answer the question thoroughly based STRICTLY on the visual document pages provided above.\n"
-            "2. Ground every factual claim with explicit page citations in the exact format [Page <page_id>].\n"
-            "3. If citing data from tables or charts, cite specific table rows/columns or chart axes/values "
-            "(e.g., '[Page {first_page}, Table 1 Row 2]' or '[Page {first_page}, Chart Y-axis]').\n"
-            "4. If the provided pages do NOT contain sufficient information to answer the question with certainty, "
-            "explicitly state: 'The provided document pages do not contain sufficient information to answer this question.'\n\n"
-            "Answer:"
-        ).format(first_page=page_ids[0] if page_ids else "N/A")
+            f"Question: {query}\n\n"
+            "Format your response professionally with this clean executive structure:\n"
+            "1. **Direct Answer / Executive Summary**: State the bottom-line answer immediately in 1 concise sentence.\n"
+            "2. **Evidence / Breakdown**: If calculating or summarizing items, provide a clean markdown table or bulleted breakdown with dates and roles.\n"
+            "3. **Grounded Citations**: Cite referenced pages as [Page 1], [Page 2], etc.\n"
+            "Keep the response crisp, precise, and well-structured without rambling or disclaimers."
+        )
 
         user_content.append({"type": "text", "text": instructions})
 
         system_prompt = (
-            "You are a precise, grounded document intelligence assistant. "
-            "You inspect multimodal document pages, diagrams, tables, and text to answer questions accurately. "
-            "You always cite specific pages [Page <id>] and visual elements without hallucinating."
+            "You are an executive document intelligence assistant. "
+            "You provide concise, highly structured, grounded answers directly from visual document pages. "
+            "Always state the primary conclusion first, followed by a neat structured breakdown and page citations like [Page 1]."
         )
 
         return [
@@ -156,8 +168,10 @@ class VLMReader:
     ) -> tuple[list[str], list[str]]:
         """
         Extract page references and fine-grained citations from generated answer.
+        Supports both natural numbers [Page 1], [Page 2] and raw identifiers.
         """
         page_set = set(str(pid) for pid in page_ids)
+        page_num_map = {f"Page {i+1}": pid for i, pid in enumerate(page_ids)}
         extracted_pages: set[str] = set()
         citations: list[str] = []
 
@@ -167,7 +181,12 @@ class VLMReader:
         for match in bracket_pattern.finditer(text):
             citation_str = match.group(0)
             citations.append(citation_str)
-            inner = match.group(1)
+            inner = match.group(1).strip()
+            # Match natural numbers like "1" or "Page 1"
+            if inner.isdigit():
+                idx = int(inner) - 1
+                if 0 <= idx < len(page_ids):
+                    extracted_pages.add(page_ids[idx])
             for candidate in re.split(r"[,;]\s*", inner):
                 candidate_clean = candidate.strip()
                 for pid in page_set:
@@ -179,7 +198,11 @@ class VLMReader:
         )
         for match in unbracketed_pattern.finditer(text):
             pid_candidate = match.group(1).strip()
-            if pid_candidate in page_set:
+            if pid_candidate.isdigit():
+                idx = int(pid_candidate) - 1
+                if 0 <= idx < len(page_ids):
+                    extracted_pages.add(page_ids[idx])
+            elif pid_candidate in page_set:
                 extracted_pages.add(pid_candidate)
                 if match.group(0) not in citations:
                     citations.append(match.group(0))
