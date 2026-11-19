@@ -119,6 +119,7 @@ class VLMReader:
         query: str,
         page_images: Sequence[Any],
         page_ids: Sequence[str],
+        page_texts: Optional[Sequence[str]] = None,
     ) -> list[dict[str, Any]]:
         """
         Construct multi-image structured messages for grounded QA.
@@ -133,12 +134,10 @@ class VLMReader:
         for idx, (img, pid) in enumerate(zip(page_images, page_ids)):
             pil_img = _ensure_pil_image(img)
             page_num = idx + 1
-            user_content.append(
-                {
-                    "type": "text",
-                    "text": f"--- Document Page {page_num} [Page {page_num}] (ID: {pid}) ---\n",
-                }
-            )
+            header_text = f"--- Document Page {page_num} [Page {page_num}] (ID: {pid}) ---\n"
+            if page_texts and idx < len(page_texts) and page_texts[idx]:
+                header_text += f"[Extracted Page Layout & Text Content]:\n{page_texts[idx]}\n"
+            user_content.append({"type": "text", "text": header_text})
             user_content.append({"type": "image", "image": pil_img})
 
         instructions = (
@@ -381,6 +380,7 @@ class VLMReader:
         query: str,
         page_images: Sequence[Any],
         page_ids: Sequence[str],
+        page_texts: Optional[Sequence[str]] = None,
         max_new_tokens: int = 1024,
         temperature: float = 0.1,
     ) -> dict[str, Any]:
@@ -405,7 +405,12 @@ class VLMReader:
                 # Fall through to OpenCode / structured fallback
 
         # 2. OpenCode / OpenAI-compatible bridge call
-        messages = self.construct_messages(query, page_images, page_ids)
+        messages = self.construct_messages(
+            query=query,
+            page_images=page_images,
+            page_ids=page_ids,
+            page_texts=page_texts,
+        )
 
         try:
             return self._call_opencode_or_openai_api(
@@ -424,9 +429,8 @@ class VLMReader:
                     f"**Grounded Query Resolution [Page {first_pid}]:**\n\n"
                     f"Retrieved {len(page_images)} visual document page(s) matching '{query}'.\n\n"
                     f"• **Active Engine Model**: `{self.model_name}`\n"
-                    f"• **Next Step**: To get live streaming answers from OpenCode or Gemini:\n"
-                    f"  1. **OpenCode Free Tier**: Launch `opencode serve` or set your OpenCode Bridge URL in Settings (⚙).\n"
-                    f"  2. **Google Gemini**: Set `export GEMINI_API_KEY=\"...\"` or enter your API key in Settings.\n"
+                    f"• **Notice**: The OpenCode Bridge returned: `{err}`.\n"
+                    f"  If running inside sandbox, make sure your bridge allows HTTP or supply your API key in Settings (⚙).\n"
                     f"All document pages are successfully indexed and retrieved via ColQwen + Qdrant multi-vector search."
                 ),
                 "citations": [f"[Page {first_pid}]"],

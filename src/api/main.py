@@ -630,6 +630,23 @@ async def query_pipeline(
     t_vlm_start = time.perf_counter()
     retrieved_images = [services.get_page_image(pid) for pid in retrieved_page_ids]
 
+    # Extract text from retrieved pages if available to assist text-oriented models
+    retrieved_texts = []
+    for pid in retrieved_page_ids:
+        meta = services.page_metadata.get(pid, {})
+        pdf_path = meta.get("pdf_path")
+        page_num = meta.get("page_number", 1) - 1
+        page_txt = ""
+        if pdf_path:
+            try:
+                import fitz
+                with fitz.open(pdf_path) as doc:
+                    if 0 <= page_num < len(doc):
+                        page_txt = doc[page_num].get_text().strip()
+            except Exception as e:
+                logger.debug("Failed extracting page text for %s: %s", pid, e)
+        retrieved_texts.append(page_txt)
+
     # Dynamically use selected reader model or bridge endpoint if specified
     vlm_reader = services.vlm_reader
     if request.model and hasattr(vlm_reader, "model_name"):
@@ -644,6 +661,7 @@ async def query_pipeline(
         query=query,
         page_images=retrieved_images,
         page_ids=retrieved_page_ids,
+        page_texts=retrieved_texts,
     )
     vlm_ms = (time.perf_counter() - t_vlm_start) * 1000.0
     total_ms = (time.perf_counter() - t_start) * 1000.0
