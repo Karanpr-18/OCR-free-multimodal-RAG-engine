@@ -15,8 +15,10 @@ from typing import List, Optional, Tuple, Union
 
 try:
     import fitz  # PyMuPDF
-except ImportError:
+    _fitz_errors = (fitz.FileDataError, fitz.EmptyFileError)
+except (ImportError, AttributeError):
     fitz = None  # type: ignore[assignment]
+    _fitz_errors = ()
 from PIL import Image
 
 logger = logging.getLogger(__name__)
@@ -83,6 +85,11 @@ def render_single_page(
 
     page_id = generate_page_id(path, page_num, dpi)
 
+    if fitz is None:
+        raise RuntimeError(
+            "PyMuPDF (fitz) is not installed. Please install it with `pip install pymupdf`."
+        )
+
     try:
         with fitz.open(str(path)) as doc:
             total_pages = len(doc)
@@ -110,7 +117,7 @@ def render_single_page(
             )
             return page_id, image
 
-    except (fitz.FileDataError, fitz.EmptyFileError) as e:
+    except (*_fitz_errors,) as e:
         logger.error("Failed to parse PDF '%s': %s", path, e)
         raise RuntimeError(f"Corrupt or unreadable PDF document '{path}': {e}") from e
     except Exception as e:
@@ -145,6 +152,11 @@ def render_pdf_pages(
     if dpi <= 0:
         raise ValueError(f"DPI must be a positive integer, got {dpi}")
 
+    if fitz is None:
+        raise RuntimeError(
+            "PyMuPDF (fitz) is not installed. Please install it with `pip install pymupdf`."
+        )
+
     try:
         with fitz.open(str(path)) as doc:
             total_pages = len(doc)
@@ -168,7 +180,7 @@ def render_pdf_pages(
             logger.info("Successfully rendered %d pages for '%s'", len(rendered), path.name)
             return rendered
 
-    except (fitz.FileDataError, fitz.EmptyFileError) as e:
+    except (*_fitz_errors,) as e:
         logger.error("Failed to parse PDF '%s': %s", path, e)
         raise RuntimeError(f"Corrupt or unreadable PDF document '{path}': {e}") from e
     except Exception as e:
@@ -203,6 +215,11 @@ def render_pdf_bytes(
         raise ValueError(f"DPI must be a positive integer, got {dpi}")
 
     content_hash = hashlib.sha256(pdf_bytes).hexdigest()[:16]
+
+    if fitz is None:
+        raise RuntimeError(
+            "PyMuPDF (fitz) is not installed. Please install it with `pip install pymupdf`."
+        )
 
     try:
         with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:

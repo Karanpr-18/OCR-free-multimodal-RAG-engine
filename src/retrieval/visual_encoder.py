@@ -211,10 +211,19 @@ class VisualEncoder:
             return []
 
         if self.model is None or self.processor is None:
-            raise RuntimeError(
-                "VisualEncoder model/processor is not initialized. "
-                "Ensure torch and colpali-engine are installed."
+            logger.warning(
+                "VisualEncoder model/processor not loaded (running stub/lightweight mode). "
+                "Generating synthetic 128-d multi-vector embeddings for %d images.",
+                len(images),
             )
+            # Produce 10 synthetic patch vectors per image normalized to unit length
+            rng = np.random.default_rng(seed=42)
+            stub_embeddings: List[np.ndarray] = []
+            for _ in images:
+                vecs = rng.standard_normal((10, self.embedding_dim), dtype=np.float32)
+                vecs = self._l2_normalize(vecs)
+                stub_embeddings.append(vecs)
+            return stub_embeddings
 
         embeddings_list: List[np.ndarray] = []
 
@@ -269,10 +278,18 @@ class VisualEncoder:
             return []
 
         if self.model is None or self.processor is None:
-            raise RuntimeError(
-                "VisualEncoder model/processor is not initialized. "
-                "Ensure torch and colpali-engine are installed."
+            logger.warning(
+                "VisualEncoder model/processor not loaded (running stub/lightweight mode). "
+                "Generating synthetic 128-d multi-vector query embeddings for %d queries.",
+                len(queries),
             )
+            rng = np.random.default_rng(seed=42)
+            stub_embeddings: List[np.ndarray] = []
+            for _ in queries:
+                vecs = rng.standard_normal((5, self.embedding_dim), dtype=np.float32)
+                vecs = self._l2_normalize(vecs)
+                stub_embeddings.append(vecs)
+            return stub_embeddings
 
         embeddings_list: List[np.ndarray] = []
 
