@@ -18,6 +18,7 @@ import logging
 import os
 import tempfile
 import time
+import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Deque, Dict, List, Optional, Tuple
@@ -378,13 +379,16 @@ async def ingest_document(
         collection_name = str(form.get("collection_name", collection_name))
         quantization_mode = str(form.get("quantization_mode", quantization_mode))
 
-        # Save uploaded bytes to temporary file
+        # Save uploaded bytes to persistent storage directory for querying
+        upload_dir = Path("./uploaded_docs")
+        upload_dir.mkdir(parents=True, exist_ok=True)
         suffix = Path(file.filename or "upload.pdf").suffix or ".pdf"
-        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-            contents = await file.read()
-            tmp.write(contents)
-            temp_file_path = tmp.name
-        pdf_path = temp_file_path
+        saved_file_path = upload_dir / f"{uuid.uuid4().hex[:12]}{suffix}"
+        contents = await file.read()
+        with open(saved_file_path, "wb") as f_out:
+            f_out.write(contents)
+        pdf_path = str(saved_file_path)
+        temp_file_path = None
 
     else:
         # JSON Body
@@ -568,7 +572,15 @@ async def query_pipeline(
                 payload = {}
             pid = payload.get("page_id") or getattr(hit, "id", None) or (hit.get("id") if isinstance(hit, dict) else None)
             if pid is not None:
-                retrieved_page_ids.append(str(pid))
+                pid_str = str(pid)
+                retrieved_page_ids.append(pid_str)
+                # Ensure metadata from Qdrant payload is registered in services.page_metadata
+                if pid_str not in services.page_metadata and payload.get("pdf_path"):
+                    services.page_metadata[pid_str] = {
+                        "pdf_path": payload.get("pdf_path"),
+                        "page_number": payload.get("page_number", 1),
+                        "dpi": 150,
+                    }
 
     # 3. Confidence Calibration & Abstention Decision
     confidence: float = 0.0

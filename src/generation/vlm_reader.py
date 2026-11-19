@@ -325,6 +325,8 @@ class VLMReader:
             headers["Authorization"] = f"Bearer {self.api_key}"
 
         formatted_messages = []
+        is_opencode_gateway = "18787" in api_url or "opencode" in self.model_name.lower()
+
         for msg in messages:
             role = msg["role"]
             content = msg["content"]
@@ -334,11 +336,19 @@ class VLMReader:
                     if item.get("type") == "text":
                         api_content.append({"type": "text", "text": item["text"]})
                     elif item.get("type") == "image":
-                        data_uri = _image_to_base64(item["image"])
-                        api_content.append(
-                            {"type": "image_url", "image_url": {"url": data_uri}}
-                        )
-                formatted_messages.append({"role": role, "content": api_content})
+                        # If calling OpenCode CLI gateway (text-based), don't pass raw 100KB image_url strings
+                        # which cause the CLI input parser to crash or ignore the image
+                        if not is_opencode_gateway:
+                            data_uri = _image_to_base64(item["image"])
+                            api_content.append(
+                                {"type": "image_url", "image_url": {"url": data_uri}}
+                            )
+                # If only text blocks remain and it's opencode, join them cleanly into a single prompt string
+                if is_opencode_gateway:
+                    joined_text = "\n".join(p["text"] for p in api_content if "text" in p)
+                    formatted_messages.append({"role": role, "content": joined_text})
+                else:
+                    formatted_messages.append({"role": role, "content": api_content})
             else:
                 formatted_messages.append({"role": role, "content": content})
 
