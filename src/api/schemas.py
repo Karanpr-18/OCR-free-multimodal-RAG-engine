@@ -81,8 +81,8 @@ class QueryRequest(BaseModel):
     )
     model: Optional[str] = Field(
         default=None,
-        description="Override reader model ID (e.g. opencode/deepseek-v4.1-flash-free, Qwen/Qwen2.5-VL-7B-Instruct)",
-        examples=["opencode/deepseek-v4.1-flash-free"],
+        description="Override reader model ID (e.g. Qwen/Qwen2.5-VL-7B-Instruct, meta-llama/Llama-3.2-11B-Vision-Instruct, openai/gpt-4o-mini)",
+        examples=["Qwen/Qwen2.5-VL-7B-Instruct"],
     )
     include_images: bool = Field(
         default=False,

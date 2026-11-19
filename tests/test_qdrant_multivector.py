@@ -167,13 +167,14 @@ class TestQdrantMultiVectorStore:
             assert call_kwargs["quantization_config"] is None
             assert store.quantization_mode == "fp32_exact"
 
-    def test_create_collection_existing_skips_when_no_force(self, store):
+    def test_create_collection_existing_skips_when_no_force(self, store, mock_qdrant_models):
         """If collection already exists and force_recreate=False, skip creation."""
         store.client.collection_exists.return_value = True
 
-        store.create_collection(force_recreate=False)
-        store.client.create_collection.assert_not_called()
-        store.client.delete_collection.assert_not_called()
+        with patch("src.retrieval.qdrant_store.models", mock_qdrant_models):
+            store.create_collection(force_recreate=False)
+            store.client.create_collection.assert_not_called()
+            store.client.delete_collection.assert_not_called()
 
     def test_create_collection_force_recreate_drops_existing(self, store, mock_qdrant_models):
         """If collection exists and force_recreate=True, drop and recreate."""
@@ -218,17 +219,18 @@ class TestQdrantMultiVectorStore:
             assert len(points[0].vector) == 10
             assert len(points[0].vector[0]) == 128
 
-    def test_upsert_pages_length_mismatch_raises_error(self, store):
+    def test_upsert_pages_length_mismatch_raises_error(self, store, mock_qdrant_models):
         """Verify ValueError is raised if page_ids and embeddings lengths do not match."""
-        with pytest.raises(ValueError, match="Mismatch"):
-            store.upsert_pages(page_ids=["p1"], embeddings=[])
+        with patch("src.retrieval.qdrant_store.models", mock_qdrant_models):
+            with pytest.raises(ValueError, match="Mismatch"):
+                store.upsert_pages(page_ids=["p1"], embeddings=[])
 
-        with pytest.raises(ValueError, match="metadata_list length must match"):
-            store.upsert_pages(
-                page_ids=["p1"],
-                embeddings=[[[0.1] * 128]],
-                metadata_list=[{}, {}],
-            )
+            with pytest.raises(ValueError, match="metadata_list length must match"):
+                store.upsert_pages(
+                    page_ids=["p1"],
+                    embeddings=[[[0.1] * 128]],
+                    metadata_list=[{}, {}],
+                )
 
     def test_search_binary_quantized_with_rescore(self, store, mock_qdrant_models):
         """Verify binary quantized search uses oversampling and rescoring parameters."""

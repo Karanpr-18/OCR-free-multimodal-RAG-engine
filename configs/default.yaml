@@ -1,7 +1,7 @@
 # Default configuration for OCR-Free Multimodal RAG Engine
 
 model:
-  vlm_model: "opencode/deepseek-v4.1-flash-free"
+  vlm_model: "Qwen/Qwen2.5-VL-3B-Instruct"
   vlm_api_endpoint: null
   vlm_api_key: null
   colqwen_model: "vidore/colqwen2.5-v0.2"
@@ -9,28 +9,32 @@ model:
   dtype: "bfloat16"
   max_new_tokens: 1024
 
-# Top models available in this engine
+# Supported real vision-language models for local weights or API providers
 supported_vlm_models:
-  - id: "opencode/deepseek-v4.1-flash-free"
-    name: "DeepSeek v4.1 Flash (Free Tier / OpenCode)"
-    type: "api"
-    free_tier: true
-  - id: "opencode/glm-5.3-flash-free"
-    name: "GLM-5.3 Flash (Free Tier / OpenCode)"
-    type: "api"
-    free_tier: true
+  - id: "Qwen/Qwen2.5-VL-3B-Instruct"
+    name: "Qwen2.5-VL 3B Instruct (Default Fast Local VLM)"
+    type: "local_or_vllm"
+    provider: "huggingface"
   - id: "Qwen/Qwen2.5-VL-7B-Instruct"
-    name: "Qwen2.5-VL 7B Instruct"
+    name: "Qwen2.5-VL 7B Instruct (High-Accuracy Local VLM)"
     type: "local_or_vllm"
-    free_tier: true
+    provider: "huggingface"
   - id: "meta-llama/Llama-3.2-11B-Vision-Instruct"
-    name: "Llama-3.2 11B Vision Instruct"
+    name: "Llama-3.2 11B Vision Instruct (Open Weight VLM)"
     type: "local_or_vllm"
-    free_tier: true
-  - id: "google/paligemma2-10b-pt-448"
-    name: "PaliGemma-2 10B"
-    type: "local_or_vllm"
-    free_tier: true
+    provider: "huggingface"
+  - id: "openai/gpt-4o-mini"
+    name: "OpenAI GPT-4o-mini (Cloud Multimodal API)"
+    type: "api"
+    provider: "openai"
+  - id: "google/gemini-1.5-flash"
+    name: "Google Gemini 1.5 Flash (Cloud Multimodal API)"
+    type: "api"
+    provider: "google"
+  - id: "google/gemini-2.0-flash"
+    name: "Google Gemini 2.0 Flash (Next-Gen Multimodal API)"
+    type: "api"
+    provider: "google"
 
 retrieval:
   top_k: 2

@@ -13,7 +13,10 @@ import os
 from pathlib import Path
 from typing import List, Optional, Tuple, Union
 
-import fitz  # PyMuPDF
+try:
+    import fitz  # PyMuPDF
+except ImportError:
+    fitz = None  # type: ignore[assignment]
 from PIL import Image
 
 logger = logging.getLogger(__name__)

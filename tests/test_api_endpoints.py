@@ -29,6 +29,7 @@ except ImportError:
     AsyncClient = None
 
 from src.api.main import app, metrics_tracker, ServiceContainer
+import src.ingestion.pdf_renderer
 
 
 # ---------------------------------------------------------------------------

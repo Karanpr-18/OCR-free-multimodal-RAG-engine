@@ -369,10 +369,19 @@ def evaluate_system(
 
 def format_ablation_markdown(summary: Dict[str, Dict[str, Any]]) -> str:
     """Format benchmark summary dictionary into a clean GitHub Flavored Markdown table."""
+    is_simulated = summary.get("_metadata", {}).get("is_simulation", True)
+    calib_notice = (
+        "> [!NOTE]\n"
+        "> **Calibration / Simulation Notice**: The table below was generated via the local evaluation harness "
+        "(`src/evaluation/run_benchmark.py`) under synthetic calibration mode for end-to-end pipeline validation. "
+        "For published empirical literature benchmarks on ViDoRe, see the official ColPali paper (Faysse et al., 2024).\n"
+    ) if is_simulated else ""
+
     lines = [
         "# Multimodal Document & Diagram RAG - Ablation & Benchmark Summary",
         "",
-        "End-to-end comparative evaluation on the **ViDoRe** benchmark (TabFQuad / DocVQA), "
+        calib_notice,
+        "End-to-end comparative evaluation harness for **ViDoRe** benchmark datasets (TabFQuad / DocVQA), "
         "contrasting an OCR-free multi-vector visual retriever against an OCR + dense text baseline, "
         "with late interaction binary quantization and calibrated selective abstention.",
         "",
@@ -448,7 +457,15 @@ def run_benchmark(
     corpus_ids, eval_queries = _generate_synthetic_eval_split(max_samples=max_samples, seed=seed)
     logger.info("Prepared evaluation corpus with %d pages and %d test queries.", len(corpus_ids), len(eval_queries))
 
-    summary: Dict[str, Dict[str, Any]] = {}
+    summary: Dict[str, Any] = {
+        "_metadata": {
+            "dataset": dataset,
+            "max_samples": max_samples,
+            "seed": seed,
+            "is_simulation": True,
+            "note": "Synthetic calibration test for pipeline evaluation harness; not a literature benchmark result.",
+        }
+    }
 
     for sys_name in target_systems:
         res = evaluate_system(
