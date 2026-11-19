@@ -94,22 +94,23 @@ DEFAULT_BENCHMARK_DATA: Dict[str, Dict[str, Any]] = {
 
 
 def load_benchmark_data(json_path: Path) -> Dict[str, Dict[str, Any]]:
-    """Load benchmark summary from disk with fallback."""
+    """Load benchmark summary from disk with fallback, filtering metadata keys."""
     if not json_path.exists():
         logger.warning(
             "Benchmark summary file not found at %s. Using standard ViDoRe benchmark reference values.",
             json_path,
         )
-        return DEFAULT_BENCHMARK_DATA
+        return {k: v for k, v in DEFAULT_BENCHMARK_DATA.items() if not k.startswith("_")}
 
     try:
         with open(json_path, "r", encoding="utf-8") as f:
             data = json.load(f)
             logger.info("Successfully loaded benchmark summary from %s.", json_path)
-            return data
+            # Filter out non-system metadata entries
+            return {k: v for k, v in data.items() if isinstance(v, dict) and not k.startswith("_")}
     except Exception as exc:
         logger.error("Failed to parse JSON at %s (%s). Using fallback data.", json_path, exc)
-        return DEFAULT_BENCHMARK_DATA
+        return {k: v for k, v in DEFAULT_BENCHMARK_DATA.items() if not k.startswith("_")}
 
 
 # ---------------------------------------------------------------------------

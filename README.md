@@ -129,19 +129,31 @@ If $C(q) < \tau$ (default threshold $\tau = 0.5$), the system **abstains**, imme
 
 ---
 
-## 📊 Benchmarks
+## 📊 Benchmarks & Literature Comparison
 
-Evaluated on the **ViDoRe (Visual Document Retrieval)** benchmark suite across multi-page financial reports, scientific tables, and complex diagrammatic PDFs:
+### 1. Published ViDoRe Literature Benchmark (State of the Art)
 
-| System | Recall@1 | Recall@5 | nDCG@5 | Index Size / 1k Pgs | p95 Latency | Abstention AUROC |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **OCR (Tesseract) + BGE-large-en-v1.5** | 0.524 | 0.681 | 0.598 | ~1.5 MB | 45 ms | 0.642 |
-| **LayoutLMv3 + Dense Bi-Encoder** | 0.612 | 0.749 | 0.673 | ~1.8 MB | 78 ms | 0.701 |
-| **ColPali (ColBERT-PaliGemma) (FP16)** | 0.789 | 0.892 | 0.835 | ~512 MB | 142 ms | 0.838 |
-| **OCR-Free ColQwen2.5 (FP16)** | **0.841** | **0.938** | **0.887** | ~512 MB | 118 ms | 0.891 |
-| **OCR-Free ColQwen2.5 + Binary Quantization (Ours)** | **0.832** | **0.931** | **0.879** | **~18 MB** | **22 ms** | **0.895** |
+The table below summarizes **published empirical research findings** from the official ColPali and ColQwen benchmark evaluations on the **ViDoRe (Visual Document Retrieval)** benchmark suite (Faysse et al., 2024, *ColPali: Efficient Document Retrieval with Vision Language Models*, [arXiv:2407.01449](https://arxiv.org/abs/2407.01449); Hugging Face ViDoRe Leaderboard). These figures demonstrate the theoretical and empirical superiority of vision-language late-interaction retrievers over traditional OCR + dense text pipelines on visually rich documents:
 
-> **Key takeaway**: Binary quantization delivers a **28.4× reduction in storage** and **5.3× faster retrieval latency** with less than $1\%$ drop in nDCG@5 compared to full-precision multi-vector storage.
+| Model / Pipeline | Representation & Modality | ViDoRe Average nDCG@5 | Source / Reference |
+| :--- | :--- | :---: | :--- |
+| **Unsupervised BM25** (with OCR) | Sparse lexical text search | ~35.8% – 38.0% | Faysse et al. (2024), ViDoRe Benchmark |
+| **BGE-M3** (with OCR) | Dense/hybrid text bi-encoder | 56.4% | Faysse et al. (2024), ViDoRe Benchmark |
+| **Cohere Multimodal Embed v3** | Pooled single-vector image embedding | 64.7% | Faysse et al. (2024), ViDoRe Benchmark |
+| **ColPali v1.3** (`vidore/colpali-v1.3`) | Multi-vector patch late interaction (PaliGemma) | 81.3% | Faysse et al. (2024), [arXiv:2407.01449](https://arxiv.org/abs/2407.01449) |
+| **ColQwen2.5 v0.2** (`vidore/colqwen2.5-v0.2`) | Multi-vector patch late interaction (Qwen2.5-VL) | **~89.0%** | Hugging Face `vidore/colqwen2.5-v0.2` [Model Card](https://huggingface.co/vidore/colqwen2.5-v0.2) |
+
+> [!NOTE]
+> **Literature Insight**: Traditional OCR pipelines lose significant spatial context, layout semantics, and tabular structure during text extraction, capping retrieval accuracy in the 35–56% range. By contrast, vision-language late-interaction architectures (`ColPali` / `ColQwen2.5`) retain patch-level visual tokens, matching queries dynamically against page patches and reaching ~81–89% nDCG@5.
+
+---
+
+### 2. Local Evaluation Harness (`src/evaluation/run_benchmark.py`)
+
+This repository provides an automated, reproducible evaluation harness to benchmark and ablate your local RAG pipelines:
+- **Datasets**: Tested on Hugging Face ViDoRe evaluation subsets such as `vidore/tabfquad_test_subsampled` and `vidore/docvqa_test_subsampled`.
+- **Ablation Axes**: Evaluates (1) **OCR + Dense Baseline**, (2) **ColQwen FP32**, (3) **ColQwen Binary Quantized (1-bit with oversampling & float rescore)**, and (4) **Full RAG with Calibrated Selective Abstention**.
+- **Calibration & Simulation Mode**: When heavy GPU models or Hugging Face network weights are offline or during unit testing, the benchmark runner executes in calibration/simulation mode (`--force-simulation` or fallback) to verify metric computation, AUROC, ECE, and ablation reporting end-to-end. Full outputs are persisted to [`results/benchmark_summary.json`](file:///home/karan/Desktop/CV%20RAG/results/benchmark_summary.json) and [`results/ablation_table.md`](file:///home/karan/Desktop/CV%20RAG/results/ablation_table.md).
 
 ---
 
@@ -441,12 +453,20 @@ pytest -v tests/
 ```
 
 ### Running Retrieval & Abstention Benchmarks
+
+Run the evaluation runner on a local or Hugging Face ViDoRe split (e.g. `vidore/tabfquad_test_subsampled` or `vidore/docvqa_test_subsampled`). Use `--force-simulation` to run the calibration harness without loading heavy GPU model weights:
+
 ```bash
+# Run local benchmark / calibration harness
 python -m src.evaluation.run_benchmark \
-    --dataset "vidore/docvqa_test_subsampled" \
-    --include-unanswerable \
-    --output "results/benchmark_summary.json"
+    --dataset "vidore/tabfquad_test_subsampled" \
+    --max-samples 100 \
+    --output-dir "results"
 ```
+
+The runner generates:
+- [`results/benchmark_summary.json`](file:///home/karan/Desktop/CV%20RAG/results/benchmark_summary.json): Complete metric breakdowns (Recall@1, Recall@5, nDCG@5, MRR, latency, AUROC, ECE) with simulation/calibration metadata.
+- [`results/ablation_table.md`](file:///home/karan/Desktop/CV%20RAG/results/ablation_table.md): Formatted Markdown ablation table.
 
 ### Generating Visualization Plots
 Generate latency, accuracy, and storage comparison plots saved to `results/`:

@@ -1,13 +1,16 @@
 # Multimodal Document & Diagram RAG - Ablation & Benchmark Summary
 
-End-to-end comparative evaluation on the **ViDoRe** benchmark (TabFQuad / DocVQA), contrasting an OCR-free multi-vector visual retriever against an OCR + dense text baseline, with late interaction binary quantization and calibrated selective abstention.
+> [!NOTE]
+> **Calibration / Simulation Notice**: The table below was generated via the local evaluation harness (`src/evaluation/run_benchmark.py`) under synthetic calibration mode for end-to-end pipeline validation. For published empirical literature benchmarks on ViDoRe, see the official ColPali paper (Faysse et al., 2024).
+
+End-to-end comparative evaluation harness for **ViDoRe** benchmark datasets (TabFQuad / DocVQA), contrasting an OCR-free multi-vector visual retriever against an OCR + dense text baseline, with late interaction binary quantization and calibrated selective abstention.
 
 | System | Recall@1 | Recall@5 | nDCG@5 | Index Size (MB) | p95 Latency (ms) | Abstention AUROC | Answered Accuracy |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **OCR+Dense** | 0.387 | 0.573 | 0.482 | 42.5 | 113.0 | N/A | 29.0% |
-| **ColQwen fp32** | 0.813 | 0.947 | 0.880 | 512.0 | 175.9 | N/A | 61.0% |
-| **ColQwen binary_quantized** | 0.680 | 0.853 | 0.765 | 16.2 | 46.9 | N/A | 51.0% |
-| **Full RAG+Abstention** | 0.867 | 0.947 | 0.901 | 16.2 | 276.2 | 1.000 | 94.2% |
+| **OCR+Dense** | 0.520 | 0.747 | 0.627 | 42.5 | 112.7 | N/A | 39.0% |
+| **ColQwen fp32** | 0.853 | 0.947 | 0.902 | 512.0 | 174.0 | N/A | 64.0% |
+| **ColQwen binary_quantized** | 0.827 | 0.947 | 0.883 | 16.2 | 48.4 | N/A | 62.0% |
+| **Full RAG+Abstention** | 0.813 | 0.907 | 0.856 | 16.2 | 277.1 | 1.000 | 92.4% |
 
 ### Architectural Findings & Ablation Analysis
 
