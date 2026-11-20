@@ -41,3 +41,6 @@ Thumbs.db
 # Model cache
 *.bin
 *.safetensors
+
+# Uploaded documents (runtime data, not source)
+uploaded_docs/
